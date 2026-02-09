@@ -204,49 +204,44 @@
                         )
                         | {{ isSavingRunConfig ? ' saving...' : 'save' }}
 
-                    .mt-4
-                      .row.g-3.align-items-start
-                        .col-md-6
-                          .d-flex.align-items-center.gap-3
-                            label.form-label.mb-0 Repeat
-                            input#repeat.form-control(
-                              type="number"
-                              v-model="runConfig.repeat"
-                              placeholder="1"
-                              min="1"
-                              style="max-width: 70px;"
-                            )
-                        .col-md-6
-                          .d-flex.align-items-center.gap-3
-                            label.form-label.mb-0 Temp
-                            input#temperature.form-control(
-                              type="number"
-                              v-model="runConfig.temperature"
-                              placeholder="0.0"
-                              min="0"
-                              max="2"
-                              step="0.1"
-                              style="max-width: 100px;"
-                            )
-                    .mt-3
-                      .d-flex.align-items-center.gap-3
-                        label.form-label.mb-0 Service
-                        select.form-select.flex-grow-1(v-model="runConfig.service" style="max-width: 300px;")
+                    .mt-4.d-flex.flex-wrap.align-items-start.gap-3
+                      .d-flex.align-items-center.gap-2
+                        label.form-label.mb-0.fw-bold Repeat
+                        input#repeat.form-control(
+                          type="number"
+                          v-model="runConfig.repeat"
+                          placeholder="1"
+                          min="1"
+                          style="max-width: 70px;"
+                        )
+                      .d-flex.align-items-center.gap-2
+                        label.form-label.mb-0.fw-bold Temp
+                        input#temperature.form-control(
+                          type="number"
+                          v-model="runConfig.temperature"
+                          placeholder="0.0"
+                          min="0"
+                          max="2"
+                          step="0.1"
+                          style="max-width: 100px;"
+                        )
+                      .d-flex.align-items-center.gap-2
+                        label.form-label.mb-0.fw-bold Service
+                        select.form-select(v-model="runConfig.service" style="max-width: 150px;")
                           option(value="" disabled)
                             | Select a service
                           option(v-for="(models, serviceName) in defaults.models" :key="serviceName" :value="serviceName")
                             | {{ serviceName }}
-
-                    .mt-3.d-flex.align-items-center.gap-3
-                      label.form-label.mb-0 Model
-                      select.form-select.flex-grow-1(v-model="runConfig.model" style="max-width: 300px;")
-                        option(value="" disabled)
-                          | Select a model
-                        option(v-for="m in filteredModels" :key="m" :value="m")
-                          | {{ m }}
+                      .d-flex.align-items-center.gap-2
+                        label.form-label.mb-0.fw-bold Model
+                        select.form-select(v-model="runConfig.model" style="max-width: 200px;")
+                          option(value="" disabled)
+                            | Select a model
+                          option(v-for="m in filteredModels" :key="m" :value="m")
+                            | {{ m }}
 
                     .mt-3
-                      label.form-label Evaluators
+                      label.form-label.fw-bold Evaluators
                     .form-group
                       div(v-for="evaluator in defaults.evaluators" :key="evaluator")
                         .form-check
