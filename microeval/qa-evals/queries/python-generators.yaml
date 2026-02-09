@@ -1,0 +1,4 @@
+---
+input: What is a Python generator?
+output: >-
+  A Python generator is a function that returns an iterator using the 'yield' keyword instead of 'return'. Generators produce values lazily, one at a time, which makes them memory-efficient for large datasets.

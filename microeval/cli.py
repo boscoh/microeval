@@ -102,7 +102,7 @@ def _run_demo(template_name: str, base_dir: str, port: int):
             logger.error(f"{template_name} template not found at {template_path}")
             raise SystemExit(1)
         logger.info(f"Creating {base_dir} from template")
-        shutil.copytree(template_path, demo_dir)
+        shutil.copytree(str(template_path), str(demo_dir))
 
     evals_dir.set_base(base_dir)
     os.environ["EVALS_DIR"] = base_dir
@@ -141,6 +141,15 @@ def demo2(
 
 
 @app.command(sort_key=4)
+def demo3(
+    base_dir: str = "qa-evals",
+    port: int = 8000,
+):
+    """Demo with Q&A evaluations (multiple queries for a single prompt)."""
+    _run_demo("qa-evals", base_dir, port)
+
+
+@app.command(sort_key=5)
 def chat(
     service: LLMService | None = None,
 ):
