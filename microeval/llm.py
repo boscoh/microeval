@@ -367,7 +367,7 @@ class OllamaClient(SimpleLLMClient):
         max_tokens: Optional[int] = None,
         temperature: float = 0.0,
     ) -> Dict[str, Any]:
-        """Ollama implementation of get_completion. Tools not supported."""
+        """Ollama implementation of get_completion with tool support."""
         await self.connect()
 
         start_time = time.time()
@@ -379,17 +379,89 @@ class OllamaClient(SimpleLLMClient):
             if max_tokens is not None:
                 options["num_predict"] = max_tokens
 
-            response = await self.client.chat(
-                model=self.model, messages=messages, options=options
-            )
+            chat_kwargs = {
+                "model": self.model,
+                "messages": messages,
+                "options": options,
+            }
+            if tools is not None:
+                chat_kwargs["tools"] = tools
+
+            response = await self.client.chat(**chat_kwargs)
             elapsed_seconds = time.time() - start_time
 
-            response_text = response["message"]["content"]
-            completion_tokens = len(response_text.split())
+            if isinstance(response, dict):
+                message_dict = response.get("message", {})
+                done_reason = response.get("done_reason", "stop")
+            else:
+                message_obj = getattr(response, "message", None)
+                done_reason = getattr(response, "done_reason", "stop")
+                
+                if message_obj is not None and hasattr(message_obj, "model_dump"):
+                    message_dict = message_obj.model_dump()
+                elif message_obj is not None:
+                    message_dict = {
+                        "content": getattr(message_obj, "content", None) or "",
+                        "tool_calls": getattr(message_obj, "tool_calls", None),
+                    }
+                else:
+                    message_dict = {}
+            
+            response_text = message_dict.get("content", "") if isinstance(message_dict, dict) else ""
+            raw_tool_calls = message_dict.get("tool_calls") if isinstance(message_dict, dict) else None
+            
+            completion_tokens = len(response_text.split()) if response_text else 0
             prompt_tokens = sum(len(m.get("content", "").split()) for m in messages)
             total_tokens = prompt_tokens + completion_tokens
 
-            return {
+            tool_calls = None
+            if raw_tool_calls:
+                tool_calls = []
+                import json
+                import uuid
+                for idx, tool_call in enumerate(raw_tool_calls):
+                    if isinstance(tool_call, dict) and "function" in tool_call:
+                        func = tool_call["function"]
+                        function_name = func.get("name", "")
+                        function_args = func.get("arguments", {})
+                        tool_call_id = tool_call.get("id", f"call_{uuid.uuid4().hex[:8]}")
+                        
+                        if isinstance(function_args, dict):
+                            function_args = json.dumps(function_args)
+                        elif not isinstance(function_args, str):
+                            function_args = str(function_args)
+                        
+                        tool_calls.append(
+                            {
+                                "function": {
+                                    "name": function_name,
+                                    "arguments": function_args,
+                                    "tool_call_id": tool_call_id,
+                                }
+                            }
+                        )
+                    elif hasattr(tool_call, "function"):
+                        function = tool_call.function
+                        function_name = getattr(function, "name", "")
+                        function_args = getattr(function, "arguments", {})
+                        tool_call_id = getattr(tool_call, "id", None) or f"call_{uuid.uuid4().hex[:8]}"
+                        
+                        if isinstance(function_args, dict):
+                            function_args = json.dumps(function_args)
+                        elif not isinstance(function_args, str):
+                            function_args = str(function_args)
+                        
+                        tool_calls.append(
+                            {
+                                "function": {
+                                    "name": function_name,
+                                    "arguments": function_args,
+                                    "tool_call_id": tool_call_id,
+                                }
+                            }
+                        )
+
+            result = {
                 "text": response_text,
                 "metadata": {
                     "usage": {
@@ -399,9 +471,14 @@ class OllamaClient(SimpleLLMClient):
                         "elapsed_seconds": elapsed_seconds,
                     },
                     "model": self.model,
-                    "finish_reason": response.get("done_reason", "stop"),
+                    "finish_reason": done_reason,
                 },
             }
+
+            if tool_calls:
+                result["tool_calls"] = tool_calls
+
+            return result
         except Exception as e:
             logger.error(f"Error calling Ollama: {e}")
             return {
