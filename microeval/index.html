@@ -38,7 +38,7 @@
             .filter((l) => l.trim())
             .map((l) => l.match(/^\s*/)[0].length),
         );
-        return pug.render(lines.map((l) => l.slice(minIndent)).join("\n"));
+        return pug.render(lines.map((l) => l.slice(minIndent)).join("\n"), {doctype: 'html'});
       }
     </script>
 
@@ -77,7 +77,7 @@
 
   <script>
     // language=pug
-    const template = renderHtmlFromPug(`
+    const template = renderHtmlFromPug(/* language=pug */`
     .container-fluid.h-100
 
       .toast-container
@@ -206,13 +206,27 @@
 
                     .mt-4.d-flex.flex-wrap.align-items-start.gap-3
                       .d-flex.align-items-center.gap-2
+                        label.form-label.mb-0.fw-bold Service
+                        select.form-select(v-model="runConfig.service")
+                          option(value="" disabled)
+                            | Select a service
+                          option(v-for="(models, serviceName) in defaults.models" :key="serviceName" :value="serviceName")
+                            | {{ serviceName }}
+                      .d-flex.align-items-center.gap-2
+                        label.form-label.mb-0.fw-bold Model
+                        select.form-select(v-model="runConfig.model")
+                          option(value="" disabled)
+                            | Select a model
+                          option(v-for="m in filteredModels" :key="m" :value="m")
+                            | {{ m }}
+                      .d-flex.align-items-center.gap-2
                         label.form-label.mb-0.fw-bold Repeat
                         input#repeat.form-control(
                           type="number"
                           v-model="runConfig.repeat"
                           placeholder="1"
                           min="1"
-                          style="max-width: 70px;"
+                          style="max-width: 4.5em;"
                         )
                       .d-flex.align-items-center.gap-2
                         label.form-label.mb-0.fw-bold Temp
@@ -223,22 +237,8 @@
                           min="0"
                           max="2"
                           step="0.1"
-                          style="max-width: 100px;"
+                          style="max-width: 5em;"
                         )
-                      .d-flex.align-items-center.gap-2
-                        label.form-label.mb-0.fw-bold Service
-                        select.form-select(v-model="runConfig.service" style="max-width: 150px;")
-                          option(value="" disabled)
-                            | Select a service
-                          option(v-for="(models, serviceName) in defaults.models" :key="serviceName" :value="serviceName")
-                            | {{ serviceName }}
-                      .d-flex.align-items-center.gap-2
-                        label.form-label.mb-0.fw-bold Model
-                        select.form-select(v-model="runConfig.model" style="max-width: 200px;")
-                          option(value="" disabled)
-                            | Select a model
-                          option(v-for="m in filteredModels" :key="m" :value="m")
-                            | {{ m }}
 
                     .mt-3
                       label.form-label.fw-bold Evaluators
