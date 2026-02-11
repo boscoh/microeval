@@ -344,7 +344,6 @@ class OllamaClient(SimpleLLMClient):
         logger.info(f"Initializing 'ollama:{self.model}'")
         self.client = ollama.AsyncClient()
         try:
-            # Check if Ollama is available by trying to list models
             await self.client.list()
         except Exception as e:
             raise RuntimeError(
@@ -359,6 +358,49 @@ class OllamaClient(SimpleLLMClient):
                 f"Model '{self.model}' is not available. "
                 f"Please ensure the model is pulled and available. Error: {str(e)}"
             )
+
+    def _transform_messages(
+        self, messages: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Transform standardized message format to Ollama's expected format.
+
+        Ollama expects tool_calls arguments as dicts, not JSON strings.
+        """
+        transformed = []
+        for msg in messages:
+            if msg.get("role") == "assistant" and msg.get("tool_calls"):
+                new_msg = dict(msg)
+                new_msg["tool_calls"] = []
+                for tc in msg["tool_calls"]:
+                    new_tc = dict(tc)
+                    if "function" in new_tc:
+                        new_func = dict(new_tc["function"])
+                        args = new_func.get("arguments", {})
+
+                        # Ensure arguments is always a dict for Ollama
+                        if isinstance(args, str):
+                            if args:  # Only parse non-empty strings
+                                try:
+                                    parsed_args = json.loads(args)
+                                    new_func["arguments"] = parsed_args
+                                    logger.debug(f"Converted string args to dict: {args[:50]}...")
+                                except json.JSONDecodeError as e:
+                                    logger.warning(f"Failed to parse tool arguments: {args[:50]}... Error: {e}")
+                                    new_func["arguments"] = {}
+                            else:
+                                new_func["arguments"] = {}
+                        elif not isinstance(args, dict):
+                            # Handle any other type by converting to dict
+                            logger.warning(f"Unexpected arguments type {type(args)}, converting to empty dict")
+                            new_func["arguments"] = {}
+                        # If already a dict, keep it as is
+
+                        new_tc["function"] = new_func
+                    new_msg["tool_calls"].append(new_tc)
+                transformed.append(new_msg)
+            else:
+                transformed.append(msg)
+        return transformed
 
     async def get_completion(
         self,
@@ -379,9 +421,28 @@ class OllamaClient(SimpleLLMClient):
             if max_tokens is not None:
                 options["num_predict"] = max_tokens
 
+            transformed_messages = self._transform_messages(messages)
+
+            # Validate that all tool_calls have dict arguments before sending to Ollama
+            for msg in transformed_messages:
+                if msg.get("role") == "assistant" and msg.get("tool_calls"):
+                    for tc in msg.get("tool_calls", []):
+                        if "function" in tc:
+                            args = tc["function"].get("arguments")
+                            if isinstance(args, str):
+                                logger.error(
+                                    f"Tool call still has string arguments after transformation: "
+                                    f"tool={tc['function'].get('name')}, args={args[:100]}"
+                                )
+                                # Force convert to dict as fallback
+                                try:
+                                    tc["function"]["arguments"] = json.loads(args) if args else {}
+                                except json.JSONDecodeError:
+                                    tc["function"]["arguments"] = {}
+
             chat_kwargs = {
                 "model": self.model,
-                "messages": messages,
+                "messages": transformed_messages,
                 "options": options,
             }
             if tools is not None:
@@ -407,17 +468,16 @@ class OllamaClient(SimpleLLMClient):
                 else:
                     message_dict = {}
             
-            response_text = message_dict.get("content", "") if isinstance(message_dict, dict) else ""
+            response_text = (message_dict.get("content") or "") if isinstance(message_dict, dict) else ""
             raw_tool_calls = message_dict.get("tool_calls") if isinstance(message_dict, dict) else None
             
             completion_tokens = len(response_text.split()) if response_text else 0
-            prompt_tokens = sum(len(m.get("content", "").split()) for m in messages)
+            prompt_tokens = sum(len((m.get("content") or "").split()) for m in messages)
             total_tokens = prompt_tokens + completion_tokens
 
             tool_calls = None
             if raw_tool_calls:
                 tool_calls = []
-                import json
                 import uuid
                 for idx, tool_call in enumerate(raw_tool_calls):
                     if isinstance(tool_call, dict) and "function" in tool_call:
