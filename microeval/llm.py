@@ -52,9 +52,9 @@ def load_config() -> Dict[str, Any]:
                 "groq": ["llama-3.3-70b-versatile"],
             },
             "embed_models": {
-                "openai": ["text-embedding-3-small"],
-                "ollama": ["nomic-embed-text"],
-                "bedrock": ["amazon.titan-embed-text-v2:0"],
+                "openai": ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"],
+                "ollama": ["nomic-embed-text", "mxbai-embed-large", "all-minilm"],
+                "bedrock": ["amazon.titan-embed-text-v2:0", "amazon.titan-embed-text-v1", "cohere.embed-english-v3", "cohere.embed-multilingual-v3"],
             },
         }
     except json.JSONDecodeError as e:
