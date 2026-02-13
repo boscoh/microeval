@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from path import Path
 
 from microeval.chat import main as chat_main
-from microeval.llm import LLMService
+from microeval.llm import LLMService, load_config
 from microeval.logger import setup_logging
 from microeval.runner import run_all
 from microeval.schemas import evals_dir
@@ -105,17 +105,12 @@ def _run_demo(template_name: str, base_dir: str, port: int):
         logger.info(f"Creating {base_dir} from template")
         shutil.copytree(str(template_path), str(demo_dir))
 
-        default_run_config = {
-            "service": "openai",
-            "model": "gpt-4",
-            "temperature": 0.0,
-            "repeat": 1,
-            "evaluators": ["coherence"]
-        }
+        # Copy the LLM config (chat_models and embed_models) to the demo directory
+        llm_config = load_config()
         config_path = demo_dir / "config.json"
         with open(config_path, "w") as f:
-            json.dump(default_run_config, f, indent=2)
-        logger.info(f"Created default config.json in {base_dir}")
+            json.dump(llm_config, f, indent=2)
+        logger.info(f"Created config.json in {base_dir}")
 
     evals_dir.set_base(base_dir)
     os.environ["EVALS_DIR"] = base_dir
