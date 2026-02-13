@@ -30,15 +30,15 @@ LLMService = Literal["openai", "ollama", "bedrock", "groq"]
 
 config = {
     "chat_models": {
-        "bedrock": "amazon.nova-pro-v1:0",
-        "openai": "gpt-4o",
-        "ollama": "llama3.2",
-        "groq": "llama-3.3-70b-versatile",
+        "bedrock": ["amazon.nova-pro-v1:0"],
+        "openai": ["gpt-4o"],
+        "ollama": ["llama3.2"],
+        "groq": ["llama-3.3-70b-versatile"],
     },
     "embed_models": {
-        "openai": "text-embedding-3-small",
-        "ollama": "nomic-embed-text",
-        "bedrock": "amazon.titan-embed-text-v2:0",
+        "openai": ["text-embedding-3-small"],
+        "ollama": ["nomic-embed-text"],
+        "bedrock": ["amazon.titan-embed-text-v2:0"],
     },
 }
 
@@ -67,9 +67,10 @@ def get_llm_client(client_type: LLMService, **kwargs) -> "SimpleLLMClient":
     # Use config default model if not provided
     if "model" not in kwargs:
         config = load_config()
-        default_model = config.get("chat_models", {}).get(client_type)
-        if default_model:
-            kwargs["model"] = default_model
+        default_models = config.get("chat_models", {}).get(client_type, [])
+        if default_models:
+            # Take the first model from the list as the default
+            kwargs["model"] = default_models[0] if isinstance(default_models, list) else default_models
 
     if client_type == "openai":
         return OpenAIClient(**kwargs)
