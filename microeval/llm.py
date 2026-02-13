@@ -15,6 +15,7 @@ import time
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from functools import lru_cache
+from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 import aioboto3
@@ -28,29 +29,37 @@ logger = logging.getLogger(__name__)
 
 LLMService = Literal["openai", "ollama", "bedrock", "groq"]
 
-config = {
-    "chat_models": {
-        "bedrock": ["amazon.nova-pro-v1:0"],
-        "openai": ["gpt-4o"],
-        "ollama": ["llama3.2"],
-        "groq": ["llama-3.3-70b-versatile"],
-    },
-    "embed_models": {
-        "openai": ["text-embedding-3-small"],
-        "ollama": ["nomic-embed-text"],
-        "bedrock": ["amazon.titan-embed-text-v2:0"],
-    },
-}
-
 
 def load_config() -> Dict[str, Any]:
     """
-    Return a copy of the config dictionary.
+    Load and return the config dictionary from config.json.
 
     Returns:
-        Dict[str, Any]: Configuration dictionary
+        Dict[str, Any]: Configuration dictionary with chat_models and embed_models
     """
-    return copy.deepcopy(config)
+    config_path = Path(__file__).parent / "config.json"
+    try:
+        with open(config_path, "r") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        logger.warning(f"Config file not found at {config_path}, using fallback config")
+        # Fallback config if file doesn't exist
+        return {
+            "chat_models": {
+                "bedrock": ["amazon.nova-pro-v1:0"],
+                "openai": ["gpt-4o"],
+                "ollama": ["llama3.2"],
+                "groq": ["llama-3.3-70b-versatile"],
+            },
+            "embed_models": {
+                "openai": ["text-embedding-3-small"],
+                "ollama": ["nomic-embed-text"],
+                "bedrock": ["amazon.titan-embed-text-v2:0"],
+            },
+        }
+    except json.JSONDecodeError as e:
+        logger.error(f"Error parsing config.json: {e}")
+        raise
 
 
 def get_llm_client(client_type: LLMService, **kwargs) -> "SimpleLLMClient":
