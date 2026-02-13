@@ -144,8 +144,21 @@ def get_defaults():
     """
     Response: { "content": object }
     """
+    # Try to load models.json from the eval directory, fall back to package default
+    models_path = Path(evals_dir.name) / "models.json"
+    if models_path.exists():
+        try:
+            with open(models_path, "r") as f:
+                models_config = json.load(f)
+                chat_models_local = models_config.get("chat_models", chat_models)
+        except (json.JSONDecodeError, OSError) as e:
+            logger.warning(f"Failed to load {models_path}, using package default: {e}")
+            chat_models_local = chat_models
+    else:
+        chat_models_local = chat_models
+
     default_service = "openai"
-    models = chat_models.get(default_service, [])
+    models = chat_models_local.get(default_service, [])
     default_model = models[0] if isinstance(models, list) and models else models if isinstance(models, str) else ""
 
     return {
@@ -164,8 +177,8 @@ def get_defaults():
                 "temperature": 0.2,
                 "evaluators": ["coherence"],
             },
-            "services": list(chat_models.keys()),
-            "models": chat_models,
+            "services": list(chat_models_local.keys()),
+            "models": chat_models_local,
         }
     }
 
