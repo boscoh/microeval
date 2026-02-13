@@ -1,0 +1,14 @@
+---
+file_path: null
+query_ref: summarize
+prompt_ref: summarize
+service: openai
+model: gpt-4o
+repeat: 3
+temperature: 0.5
+evaluators:
+- word_count
+- coherence
+- equivalence
+eval_service: null
+eval_model: null

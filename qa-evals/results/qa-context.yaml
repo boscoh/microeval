@@ -1,0 +1,56 @@
+---
+texts:
+- >-
+  A context manager in Python is a resource management technique that allows you to
+  perform setup and cleanup actions, mainly for resources like files, connections,
+  or locks, in a way that is both exception-safe and thread-safe. It is typically
+  implemented using the `with` statement, which ensures that resources are properly
+  acquired and released, regardless of whether an exception is thrown or not.
+- >-
+  A context manager in Python is a resource management technique that allows you to
+  perform setup and cleanup actions, mainly for resources like files, connections,
+  or locks, in a way that is both exception-safe and thread-safe. It is typically
+  implemented using the `with` statement, which ensures that resources are properly
+  acquired and released, regardless of whether an exception is thrown or not.
+- >-
+  A context manager in Python is a resource management technique that allows you to
+  perform setup and teardown actions, primarily for resources like files, connections,
+  or locks, in a way that is both exception-safe and thread-safe. It is typically
+  implemented using the `with` statement, which ensures that resources are properly
+  cleaned up after use, regardless of whether an exception is thrown or not.
+evaluations:
+- name: coherence
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: equivalence
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 0.368145227432251
+  - 0.24888205528259277
+  - 0.25188684463500977
+  average: 0.28963804244995117
+  standard_deviation: 0.06800581416428216
+- name: token_count
+  values:
+  - 185
+  - 185
+  - 186
+  average: 185.33333333333334
+  standard_deviation: 0.5773502691896257
+- name: cost
+  values:
+  - 0.00019406500000000002
+  - 0.00019406500000000002
+  - 0.000195114
+  average: 0.00019441466666666668
+  standard_deviation: 6.056404323799074e-07

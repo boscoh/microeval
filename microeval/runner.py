@@ -12,10 +12,13 @@ from microeval.yamlx import save_yaml
 logger = logging.getLogger(__name__)
 
 
-def get_eval_llm_client(config: RunConfig):
+def get_eval_llm_client(config: RunConfig, model_to_test: str):
     """
     Get LLM client for evaluations.
     Uses eval_service/eval_model if specified, otherwise falls back to the tested LLM.
+
+    :param config: RunConfig with evaluation settings
+    :param model_to_test: The model being tested (used as fallback if eval_model not specified)
     """
     if config.eval_service:
         kwargs = {}
@@ -24,29 +27,47 @@ def get_eval_llm_client(config: RunConfig):
         logger.info(f"Using separate LLM for evaluation: {config.eval_service}")
         return get_llm_client(config.eval_service, **kwargs)
 
-    return get_llm_client(config.service, model=config.model)
+    return get_llm_client(config.service, model=model_to_test)
 
 
 class Runner:
     def __init__(self, file_path: str):
         self._config = RunConfig.read_from_yaml(file_path)
-        self._llm = get_llm_client(self._config.service, model=self._config.model)
-        self._eval_llm = get_eval_llm_client(self._config)
-        self._cost_per_token = self._llm.get_token_cost()
-        self._evaluation_runner = EvaluationRunner(self._eval_llm, self._config)
 
     async def run(self):
+        """Run evaluations for all configured models."""
+        evals_dir.results.makedirs_p()
+        base_results_filename = Path(self._config.file_path).stem
+
+        # Run evaluations for each model
+        for model in self._config.model:
+            await self._run_single_model(model, base_results_filename)
+
+    async def _run_single_model(self, model: str, base_results_filename: str):
+        """Run evaluation for a single model."""
         try:
-            evals_dir.results.makedirs_p()
-            results_filename = Path(self._config.file_path).stem + ".yaml"
+            # Create model-specific results filename
+            if len(self._config.model) > 1:
+                results_filename = f"{base_results_filename}-{model}.yaml"
+            else:
+                results_filename = f"{base_results_filename}.yaml"
             results_path = evals_dir.results / results_filename
+
             if results_path.exists():
                 results_path.remove()
                 logger.info(f"Removed existing results file '{results_path}'")
 
-            await self._llm.connect()
-            if self._eval_llm is not self._llm:
-                await self._eval_llm.connect()
+            logger.info(f"Running evaluation for model: {model}")
+
+            # Create LLM clients for this model
+            llm = get_llm_client(self._config.service, model=model)
+            eval_llm = get_eval_llm_client(self._config, model)
+            cost_per_token = llm.get_token_cost()
+            evaluation_runner = EvaluationRunner(eval_llm, self._config)
+
+            await llm.connect()
+            if eval_llm is not llm:
+                await eval_llm.connect()
 
             fields = self._config.evaluators + [
                 "elapsed_seconds",
@@ -57,9 +78,9 @@ class Runner:
 
             response_texts = []
             for i in range(self._config.repeat):
-                logger.info(f">>> Evaluate iteration {i + 1}/{self._config.repeat}")
+                logger.info(f">>> Evaluate iteration {i + 1}/{self._config.repeat} for model {model}")
 
-                response = await self._llm.get_completion(
+                response = await llm.get_completion(
                     messages=[
                         {"role": "system", "content": self._config.prompt},
                         {"role": "user", "content": self._config.input},
@@ -80,7 +101,7 @@ class Runner:
 
                 token_count = response["metadata"]["usage"].get("total_tokens", 0)
                 cost_value = (
-                    token_count * self._cost_per_token / 1000
+                    token_count * cost_per_token / 1000
                     if token_count is not None
                     else None
                 )
@@ -90,7 +111,7 @@ class Runner:
                 eval_results_dict["token_count"].values.append(token_count)
                 eval_results_dict["cost"].values.append(cost_value)
 
-                results = await self._evaluation_runner.evaluate_response(response)
+                results = await evaluation_runner.evaluate_response(response)
                 for evaluator_name, value in results.items():
                     eval_results_dict[evaluator_name].values.append(value["score"])
 
@@ -104,17 +125,21 @@ class Runner:
 
             evaluations = [result.model_dump() for result in eval_results_dict.values()]
 
-            eval_results = {"texts": response_texts, "evaluations": evaluations}
+            eval_results = {
+                "model": model,
+                "texts": response_texts,
+                "evaluations": evaluations
+            }
             save_yaml(eval_results, results_path)
 
             logger.info(f"Results saved to '{results_path}'")
         except Exception as e:
-            logger.error(f"Error during run: {e}")
+            logger.error(f"Error during run for model {model}: {e}")
             raise
         finally:
-            await self._llm.close()
-            if self._eval_llm is not self._llm:
-                await self._eval_llm.close()
+            await llm.close()
+            if eval_llm is not llm:
+                await eval_llm.close()
 
 
 async def run_all(file_paths):

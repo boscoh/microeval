@@ -1,0 +1,61 @@
+---
+texts:
+- >-
+  The "quick brown fox" sentence is a well-known phrase that contains all 26 letters
+  of the English alphabet at least once. It has been used since the late 1800s to
+  test typewriters, fonts, and keyboards, remaining popular today for its versatility
+  in demonstrating keyboard layout and font capabilities.
+- >-
+  The "quick brown fox" sentence is a well-known phrase that contains all 26 letters
+  of the English alphabet at least once, making it useful for testing typewriters
+  and keyboards. It originated in the late 1800s and has remained popular to this
+  day. The phrase is often used to test typing fonts and keyboard layouts.
+- >-
+  The "quick brown fox" sentence is a well-known phrase that contains every letter
+  of the English alphabet at least once, making it useful for testing typing and keyboard
+  layouts. It originated in the late 1800s and has remained popular over the centuries
+  as a tool for testing typewriters and keyboards. The phrase is still widely used
+  today for this purpose.
+evaluations:
+- name: word_count
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: coherence
+  values:
+  - 0.8
+  - 0.9
+  - 0.9
+  average: 0.8666666666666667
+  standard_deviation: 0.05773502691896256
+- name: equivalence
+  values:
+  - 0.8
+  - 0.8
+  - 0.8
+  average: 0.8
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 3.267954111099243
+  - 3.3331830501556396
+  - 3.504601240158081
+  average: 3.3685794671376548
+  standard_deviation: 0.12222988862925908
+- name: token_count
+  values:
+  - 144
+  - 150
+  - 156
+  average: 150
+  standard_deviation: 6.0
+- name: cost
+  values:
+  - 0.0
+  - 0.0
+  - 0.0
+  average: 0.0
+  standard_deviation: 0.0

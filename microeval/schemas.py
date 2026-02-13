@@ -4,7 +4,7 @@ import os
 from typing import Any, Dict, List, Literal, Optional, Union
 
 from path import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from microeval.llm import LLMService
 from microeval.yamlx import load_yaml, save_yaml
@@ -81,7 +81,7 @@ class RunConfig(BaseModel):
     input: str = ""
     output: str = ""
     service: LLMService
-    model: str = ""
+    model: List[str] = Field(default_factory=list)
     repeat: int = 1
     temperature: float = 0.0
     evaluators: List[Union[str, EvaluatorConfig, Dict[str, Any]]] = Field(
@@ -89,6 +89,14 @@ class RunConfig(BaseModel):
     )
     eval_service: Optional[LLMService] = None
     eval_model: Optional[str] = None
+
+    @field_validator("model", mode="before")
+    @classmethod
+    def convert_model_to_list(cls, v):
+        """Convert string model to list for backward compatibility."""
+        if isinstance(v, str):
+            return [v] if v else []
+        return v
 
     @staticmethod
     def read_from_yaml(file_path: str) -> "RunConfig":

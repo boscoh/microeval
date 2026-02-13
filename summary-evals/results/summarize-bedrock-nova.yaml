@@ -1,0 +1,58 @@
+---
+texts:
+- >-
+  The sentence "The quick brown fox jumps over the lazy dog" is famous for containing
+  all English alphabet letters. It has been used for centuries to test typewriters,
+  fonts, and keyboards. First used in the late 1800s, it remains popular for testing
+  purposes.
+- >-
+  The sentence "The quick brown fox jumps over the lazy dog" includes all English
+  alphabet letters and is used to test typewriters, fonts, and keyboards. It originated
+  in the late 1800s and is still popular for this purpose.
+- >-
+  The sentence "The quick brown fox jumps over the lazy dog" is famous for containing
+  all English alphabet letters. It has been used for centuries to test typewriters,
+  fonts, and keyboards, and was first used in the late 1800s.
+evaluations:
+- name: word_count
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: coherence
+  values:
+  - 0.9
+  - 0.9
+  - 0.9
+  average: 0.9
+  standard_deviation: 0.0
+- name: equivalence
+  values:
+  - 0.9
+  - 0.9
+  - 0.9
+  average: 0.9
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 2.7797720432281494
+  - 0.6230273246765137
+  - 0.5552661418914795
+  average: 1.3193551699320476
+  standard_deviation: 1.265211831010554
+- name: token_count
+  values:
+  - 181
+  - 174
+  - 176
+  average: 177
+  standard_deviation: 3.605551275463989
+- name: cost
+  values:
+  - 0.00055024
+  - 0.00052896
+  - 0.0005350400000000001
+  average: 0.00053808
+  standard_deviation: 1.0960875877410536e-05

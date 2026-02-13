@@ -1,0 +1,50 @@
+---
+texts:
+- >-
+  A Python list comprehension is a compact way to create a new list by performing
+  an operation on each item in an existing list or other iterable, using a syntax
+  that combines a for loop and an if statement into a single expression.
+- >-
+  A Python list comprehension is a compact way to create a new list by performing
+  an operation on each item in an existing list or other iterable, using a syntax
+  that combines a for loop and an if statement into a single expression.
+- >-
+  A Python list comprehension is a compact way to create a new list by performing
+  an operation on each item in an existing list or other iterable, using a syntax
+  that combines a for loop and an if statement into a single expression.
+evaluations:
+- name: coherence
+  values:
+  - 0.9
+  - 0.9
+  - 0.9
+  average: 0.9
+  standard_deviation: 0.0
+- name: equivalence
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 0.31696105003356934
+  - 0.2084181308746338
+  - 0.18470501899719238
+  average: 0.2366947333017985
+  standard_deviation: 0.0705165875520911
+- name: token_count
+  values:
+  - 155
+  - 155
+  - 155
+  average: 155
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 0.000162595
+  - 0.000162595
+  - 0.000162595
+  average: 0.000162595
+  standard_deviation: 0.0

@@ -1,0 +1,4 @@
+---
+input: What is a Python decorator?
+output: >-
+  A Python decorator is a function that modifies or extends the behavior of another function without permanently modifying it. Decorators use the @ symbol and are applied above function definitions.
