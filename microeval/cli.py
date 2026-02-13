@@ -107,7 +107,7 @@ def _run_demo(template_name: str, base_dir: str, port: int):
 
         default_config = {
             "service": "openai",
-            "model": ["gpt-4"],
+            "model": "gpt-4",
             "temperature": 0.0,
             "repeat": 1,
             "evaluators": ["coherence"]

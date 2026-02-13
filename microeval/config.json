@@ -2,7 +2,7 @@
   "query_ref": "example-query",
   "prompt_ref": "example-prompt",
   "service": "openai",
-  "model": ["gpt-4o", "gpt-4o-mini"],
+  "model": "gpt-4o",
   "temperature": 0.0,
   "repeat": 1,
   "evaluators": ["coherence"],
