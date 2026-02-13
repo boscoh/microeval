@@ -145,7 +145,7 @@ def get_defaults():
     Response: { "content": object }
     """
     default_service = "openai"
-    default_model = chat_models[default_service]
+    default_model = chat_models[default_service][0] if chat_models[default_service] else ""
 
     return {
         "content": {
@@ -164,9 +164,7 @@ def get_defaults():
                 "evaluators": ["coherence"],
             },
             "services": list(chat_models.keys()),
-            "models": {
-                service: [chat_models[service]] for service in chat_models.keys()
-            },
+            "models": chat_models,
         }
     }
 
