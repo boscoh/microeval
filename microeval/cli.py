@@ -105,7 +105,7 @@ def _run_demo(template_name: str, base_dir: str, port: int):
         logger.info(f"Creating {base_dir} from template")
         shutil.copytree(str(template_path), str(demo_dir))
 
-        default_config = {
+        default_run_config = {
             "service": "openai",
             "model": "gpt-4",
             "temperature": 0.0,
@@ -114,7 +114,7 @@ def _run_demo(template_name: str, base_dir: str, port: int):
         }
         config_path = demo_dir / "config.json"
         with open(config_path, "w") as f:
-            json.dump(default_config, f, indent=2)
+            json.dump(default_run_config, f, indent=2)
         logger.info(f"Created default config.json in {base_dir}")
 
     evals_dir.set_base(base_dir)
