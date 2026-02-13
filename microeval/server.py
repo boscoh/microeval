@@ -145,7 +145,8 @@ def get_defaults():
     Response: { "content": object }
     """
     default_service = "openai"
-    default_model = chat_models[default_service][0] if chat_models[default_service] else ""
+    models = chat_models.get(default_service, [])
+    default_model = models[0] if isinstance(models, list) and models else models if isinstance(models, str) else ""
 
     return {
         "content": {
