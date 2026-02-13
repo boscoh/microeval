@@ -1,6 +1,7 @@
 """CLI for microeval LLM evaluation framework."""
 
 import asyncio
+import json
 import logging
 import os
 import shutil
@@ -103,6 +104,18 @@ def _run_demo(template_name: str, base_dir: str, port: int):
             raise SystemExit(1)
         logger.info(f"Creating {base_dir} from template")
         shutil.copytree(str(template_path), str(demo_dir))
+
+        default_config = {
+            "service": "openai",
+            "model": ["gpt-4"],
+            "temperature": 0.0,
+            "repeat": 1,
+            "evaluators": ["coherence"]
+        }
+        config_path = demo_dir / "config.json"
+        with open(config_path, "w") as f:
+            json.dump(default_config, f, indent=2)
+        logger.info(f"Created default config.json in {base_dir}")
 
     evals_dir.set_base(base_dir)
     os.environ["EVALS_DIR"] = base_dir
