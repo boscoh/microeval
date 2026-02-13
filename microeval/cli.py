@@ -105,12 +105,12 @@ def _run_demo(template_name: str, base_dir: str, port: int):
         logger.info(f"Creating {base_dir} from template")
         shutil.copytree(str(template_path), str(demo_dir))
 
-        # Copy the LLM config (chat_models and embed_models) to the demo directory
+        # Copy the LLM models config (chat_models and embed_models) to the demo directory
         llm_config = load_config()
-        config_path = demo_dir / "config.json"
+        config_path = demo_dir / "models.json"
         with open(config_path, "w") as f:
             json.dump(llm_config, f, indent=2)
-        logger.info(f"Created config.json in {base_dir}")
+        logger.info(f"Created models.json in {base_dir}")
 
     evals_dir.set_base(base_dir)
     os.environ["EVALS_DIR"] = base_dir

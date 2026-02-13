@@ -32,12 +32,12 @@ LLMService = Literal["openai", "ollama", "bedrock", "groq"]
 
 def load_config() -> Dict[str, Any]:
     """
-    Load and return the config dictionary from config.json.
+    Load and return the models configuration from models.json.
 
     Returns:
         Dict[str, Any]: Configuration dictionary with chat_models and embed_models
     """
-    config_path = Path(__file__).parent / "config.json"
+    config_path = Path(__file__).parent / "models.json"
     try:
         with open(config_path, "r") as f:
             return json.load(f)
@@ -58,7 +58,7 @@ def load_config() -> Dict[str, Any]:
             },
         }
     except json.JSONDecodeError as e:
-        logger.error(f"Error parsing config.json: {e}")
+        logger.error(f"Error parsing models.json: {e}")
         raise
 
 
@@ -69,7 +69,7 @@ def get_llm_client(client_type: LLMService, **kwargs) -> "SimpleLLMClient":
     Args:
         client_type: "openai", "ollama", "bedrock", or "groq"
         **kwargs: Additional keyword arguments specific to the chat client type:
-            - model: str (optional, defaults from config.json if not provided)
+            - model: str (optional, defaults from models.json if not provided)
     """
     client_type = client_type.lower()
 
