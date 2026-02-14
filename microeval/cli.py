@@ -27,7 +27,7 @@ setup_logging()
 # Log microeval version
 try:
     _version = version("microeval")
-    logger.info(f"microeval version {_version}")
+    logger.info(f"Running microeval version {_version}")
 except Exception:
     logger.warning("microeval version unknown")
 
@@ -35,9 +35,9 @@ except Exception:
 env_path = Path.cwd() / ".env"
 env_loaded = load_dotenv(dotenv_path=env_path)
 if env_loaded:
-    logger.info(f".env loaded from {env_path}")
+    logger.info(f"Loaded .env from {env_path}")
 else:
-    logger.info(".env not found or not loaded")
+    logger.info("No .env file found")
 
 app = cyclopts.App(name="microeval", help_format="markdown")
 
