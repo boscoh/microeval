@@ -217,7 +217,7 @@ async def fetch_object(request: FetchObjectRequest):
         f = Path(request.basename)
         file_path = (table_dir / f) + ext
         content = read_content(file_path)
-        logger.info(f"Read content from '{file_path}'")
+        logger.info(f"Read from '{file_path}'")
         return ContentResponse(content=content)
 
     except KeyError as ke:
