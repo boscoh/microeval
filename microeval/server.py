@@ -223,9 +223,8 @@ async def fetch_object(request: FetchObjectRequest):
         logger.error(error_msg)
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
     except FileNotFoundError as fnf:
-        error_msg = f"File not found: {fnf}"
-        logger.info(error_msg)
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_msg)
+        logger.info(f"File not found at '{file_path}'")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(fnf))
     except Exception as ex:
         error_msg = f"Error reading object: {ex}"
         logger.error(error_msg)
