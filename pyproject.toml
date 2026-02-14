@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "microeval"
-version = "0.4.0"
+version = "0.4.1"
 description = "Minimal evaluation framework for LLM testing with local and cloud providers"
 readme = "README.md"
 requires-python = ">=3.13"
