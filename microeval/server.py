@@ -225,7 +225,7 @@ async def fetch_object(request: FetchObjectRequest):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
     except FileNotFoundError as fnf:
         error_msg = f"File not found: {fnf}"
-        logger.error(error_msg)
+        logger.info(error_msg)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_msg)
     except Exception as ex:
         error_msg = f"Error reading object: {ex}"
@@ -319,7 +319,7 @@ async def delete_object(request: DeleteRequest):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
     except FileNotFoundError as fnf:
         error_msg = f"File not found: {fnf}"
-        logger.error(error_msg)
+        logger.info(error_msg)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_msg)
     except Exception as ex:
         error_msg = f"Error deleting object: {ex}"
@@ -364,7 +364,7 @@ async def rename_object(request: RenameRequest):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=error_msg)
     except FileNotFoundError as fnf:
         error_msg = f"File not found: {fnf}"
-        logger.error(error_msg)
+        logger.info(error_msg)
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=error_msg)
     except FileExistsError as fee:
         error_msg = f"File already exists: {fee}"
