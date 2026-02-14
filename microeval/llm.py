@@ -41,7 +41,7 @@ def load_config() -> Dict[str, Any]:
     try:
         with open(config_path, "r") as f:
             config = json.load(f)
-            logger.info(f"Loaded models.json from '{config_path}'")
+            logger.info(f"Loaded selectable models from '{config_path}'")
             return config
     except FileNotFoundError:
         logger.warning(f"Config file not found at {config_path}, using fallback config")

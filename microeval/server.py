@@ -150,7 +150,7 @@ def get_defaults():
         try:
             with open(models_path, "r") as f:
                 models_config = json.load(f)
-                logger.info(f"Loaded models.json from '{models_path}'")
+                logger.info(f"Loaded selectable models from '{models_path}'")
                 chat_models_local = models_config.get("chat_models", chat_models)
         except (json.JSONDecodeError, OSError) as e:
             logger.warning(f"Failed to load {models_path}, using package default: {e}")
