@@ -70,14 +70,17 @@ def ui(
     )
     poller_thread.start()
 
-    uvicorn.run(
-        "microeval.server:app",
-        host="0.0.0.0",
-        port=port,
-        reload=reload,
-        reload_dirs=[base_dir],
-        log_config=None,
-    )
+    uvicorn_config = {
+        "app": "microeval.server:app",
+        "host": "0.0.0.0",
+        "port": port,
+        "reload": reload,
+        "log_config": None,
+    }
+    if reload:
+        uvicorn_config["reload_dirs"] = [base_dir]
+
+    uvicorn.run(**uvicorn_config)
 
 
 @app.command(sort_key=1)
@@ -139,7 +142,6 @@ def _run_demo(template_name: str, base_dir: str, port: int):
         host="0.0.0.0",
         port=port,
         reload=False,
-        reload_dirs=[base_dir],
         log_config=None,
     )
 
