@@ -1,14 +1,13 @@
 ---
 file_path: null
-query_ref: summarize
-prompt_ref: summarize
+query_ref: python-context
+prompt_ref: qa-assistant
 service: groq
 model: llama-3.3-70b-versatile
 repeat: 3
-temperature: 0.5
+temperature: 0.0
 evaluators:
-- word_count
 - coherence
 - equivalence
-eval_service: null
-eval_model: null
+eval_service: openai
+eval_model: gpt-4o

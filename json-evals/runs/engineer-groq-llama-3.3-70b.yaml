@@ -1,0 +1,11 @@
+---
+file_path: evals-engineer/runs/engineer-groq-llama-3.3-70b.yaml
+query_ref: engineer
+prompt_ref: candidate-skills
+service: groq
+model: llama-3.3-70b-versatile
+repeat: 3
+temperature: 0.5
+evaluators:
+- equivalence
+- coherence

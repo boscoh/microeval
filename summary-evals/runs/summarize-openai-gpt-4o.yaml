@@ -10,6 +10,5 @@ evaluators:
 - word_count
 - coherence
 - equivalence
-
-
-
+eval_service: null
+eval_model: null

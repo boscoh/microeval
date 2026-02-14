@@ -1,0 +1,124 @@
+---
+input: >-
+  # SENIOR ENGINEERING MANAGER 3
+
+  Personable, patient and adaptable Math tutor with 3 years of experience tutoring
+  K-12 and college students in Mathematics. Highly reliable and approachable person
+  with 8 years of professional experience in people management, leadership, documentation,
+  multi-tasking, innovation and creativity, gained through the corporate world of
+  Silicon Valley.
+
+  ## Accomplishments
+
+  ### Problem Solving - Assisted students from K-12 through college on a variety of
+  class assignments - Helped students understand how to solve quantitative problems
+  and achieve higher grades
+
+  ### Creative Lesson Planning - Motivated students to engage with course materials
+  - Organized colorful, fun flashcard games as a recall technique to enhance learning
+
+  ### Grading - Evaluated college level exam papers - Ensured grades accurately and
+  fairly reflected the quality of students' work
+
+  ### Presentation - Designed and created course presentations for SFSU management
+  classes - Created and delivered presentations for colleagues using Microsoft PowerPoint
+  and Google Docs
+
+  ### Training - Provided SQL programming training to corporate team members - Enhanced
+  team's data analysis capabilities through classroom instruction
+
+  ## Education
+
+  ### Master of Business Administration: Decision Sciences, 2007 **San Francisco State
+  University**, City, State   *Courses:* - Operations Management - Total Quality Systems
+  - Project Management - Business Forecasting - Supply Chain Management
+
+  ### Bachelor of Science: Mathematical Engineering, 2004 **Yildiz Technical University**,
+  City, Turkey   *Courses:* - Mathematical Analysis 1, 2, 3 & 4 - Linear Algebra -
+  Fundamentals of Mathematical Logic - Analytic Geometry - Ordinary Differential Equations
+  1 & 2 - Theory of Probability - Numerical Analysis 1 & 2 - Statistics - Matrix Analysis
+  - Optimization Techniques - Insurance Mathematics
+
+  ## Teaching Experience
+
+  ### Volunteer Math Tutor **09/2015 to Current**   *Company Name, City, State* -
+  Tutored students in Algebra, Geometry, and Statistics - Provided special assistance
+  to English language learners (ELLs) - Helped students understand mathematical concepts
+  both orally and in writing
+
+  ### Volunteer Math Tutor **04/2015 to 05/2015**   *Company Name, City, State* -
+  Assisted students in Algebra I and II - Provided volunteer teaching during flex
+  time hours - Helped students overcome learning challenges and expand their interests
+
+  ### Teaching Assistant **09/2005 to 05/2007**   *Company Name, City, State* - Edited
+  business forecasting and operations management thesis papers - Graded exam papers
+  and evaluated class assignments - Assisted in operations analysis and mathematics-related
+  work
+
+  ### Mathematics and Statistics Tutor **09/2005 to 09/2006**   *Company Name, City,
+  State* - Tutored students in mathematics, statistics, and probability - Covered
+  estimation, hypothesis testing, regression analysis, and correlation - Taught quantitative
+  analysis of production management and control - Covered optimization techniques,
+  inventory control, and demand forecasting
+
+  ## Corporate Experience
+
+  ### Operational Excellence Lead, Google Express **11/2004 to 04/2005**   *Company
+  Name, City, State* - Analyzed data using statistical analysis tools (correlation,
+  multiple regression) - Provided recommendations on system improvements and courier
+  performance - Conducted capacity planning using optimization and data analysis techniques
+  - Identified areas for process and speed improvement
+
+  ### Consultant **01/2013 to 02/2014**   *Company Name, City, State* - Supported
+  77Looks application from pre-launch to production - Managed marketing, content,
+  and quality testing areas - Contributed to winning SF Fashion Tech Pitch Competition
+  (June 2013) - Helped grow user base to approximately 1M active users
+
+  ### Operations Manager **10/2011 to 01/2013**   *Company Name, City, State* - Supervised
+  team of logistics analysts and warehouse staff globally - Defined KPI reports and
+  analytical tools, reducing operational errors by 80% - Transformed large data sets
+  into actionable insights - Created order forecast reports and optimization tools
+  - Developed inventory reconciliation reports
+
+  ### Senior Analyst **10/2010 to 10/2011**   *Company Name, City, State* - Ensured
+  warehouse productivity and inventory accuracy - Managed timely order fulfillment
+  and global shipments - Documented standard operating procedures (SOPs) - Developed
+  workflow processes for operations and customer support teams
+
+  ### Account Manager **07 to 10/2010**   *Company Name, City, State* - Managed customer
+  accounts in different industries to ensure on time delivery of shipments for import
+  and export operations. - Supervised and trained new users for procurement and warehouse
+  management system.
+
+  ## Skills - **Tutoring & Teaching**: Mathematics, algebra, geometry, English, content
+  management, documentation, middle school & high school math, college math, presentation,
+  analysis, grading and evaluation, problem solving, ESL students, technology integration,
+  classroom monitoring, student assistance - **Business & Management**: Account management,
+  customer care and satisfaction, data analysis, forecasting, inventory, quantitative
+  analysis, leadership, operations management, procurement, project management, optimization
+  - **Technical Skills**: C, C++, MS Office Suite, Google Docs, SQL
+output: >-
+  [
+    "Mathematics",
+    "Problem Solving",
+    "Creative Lesson Planning",
+    "Grading",
+    "Presentation",
+    "Training",
+    "SQL",
+    "Data Analysis",
+    "Forecasting",
+    "Inventory Management",
+    "Quantitative Analysis",
+    "Leadership",
+    "Operations Management",
+    "Procurement",
+    "Project Management",
+    "Optimization",
+    "C",
+    "C++",
+    "Microsoft Office Suite",
+    "Google Docs",
+    "Master of Business Administration: Decision Sciences",
+    "Bachelor of Science: Mathematical Engineering"
+  ]

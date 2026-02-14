@@ -1,0 +1,38 @@
+{
+  "chat_models": {
+    "bedrock": [
+      "amazon.nova-pro-v1:0"
+    ],
+    "openai": [
+      "gpt-4o",
+      "gpt-4o-mini",
+      "gpt-4-turbo",
+      "gpt-4",
+      "gpt-3.5-turbo"
+    ],
+    "ollama": [
+      "llama3.2"
+    ],
+    "groq": [
+      "llama-3.3-70b-versatile"
+    ]
+  },
+  "embed_models": {
+    "openai": [
+      "text-embedding-3-small",
+      "text-embedding-3-large",
+      "text-embedding-ada-002"
+    ],
+    "ollama": [
+      "nomic-embed-text",
+      "mxbai-embed-large",
+      "all-minilm"
+    ],
+    "bedrock": [
+      "amazon.titan-embed-text-v2:0",
+      "amazon.titan-embed-text-v1",
+      "cohere.embed-english-v3",
+      "cohere.embed-multilingual-v3"
+    ]
+  }
+}

@@ -1,0 +1,11 @@
+---
+file_path: evals-engineer/runs/engineer-bedrock-nova-pro.yaml
+query_ref: engineer
+prompt_ref: candidate-skills
+service: bedrock
+model: amazon.nova-pro-v1:0
+repeat: 3
+temperature: 0.5
+evaluators:
+- equivalence
+- coherence

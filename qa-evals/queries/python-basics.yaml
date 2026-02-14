@@ -1,0 +1,4 @@
+---
+input: What is a Python list comprehension?
+output: >-
+  A Python list comprehension is a concise way to create lists by applying an expression to each item in an iterable, optionally with a condition. For example: [x*2 for x in range(5) if x > 0] creates [2, 4, 6, 8].
