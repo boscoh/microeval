@@ -40,7 +40,9 @@ def load_config() -> Dict[str, Any]:
     config_path = Path(__file__).parent / "models.json"
     try:
         with open(config_path, "r") as f:
-            return json.load(f)
+            config = json.load(f)
+            logger.info(f"Loaded models.json from '{config_path}'")
+            return config
     except FileNotFoundError:
         logger.warning(f"Config file not found at {config_path}, using fallback config")
         # Fallback config if file doesn't exist
