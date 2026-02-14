@@ -210,7 +210,6 @@ class FetchObjectRequest(BaseModel):
 @app.post("/fetch", response_model=ContentResponse)
 async def fetch_object(request: FetchObjectRequest):
     try:
-        logger.info(f"Request to fetch {request.table}/{request.basename}")
         table_dir = evals_dir.get_dir(request.table)
         ext = ext_from_table[request.table]
         f = Path(request.basename)
