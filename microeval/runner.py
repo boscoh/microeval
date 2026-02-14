@@ -56,8 +56,9 @@ class Runner:
             eval_results_dict = {f: RunResult(name=f) for f in fields}
 
             response_texts = []
+            run_id = Path(self._config.file_path).stem
             for i in range(self._config.repeat):
-                logger.info(f">>> Evaluate iteration {i + 1}/{self._config.repeat}")
+                logger.info(f">>> Evaluate iteration {i + 1}/{self._config.repeat} {run_id}")
 
                 response = await self._llm.get_completion(
                     messages=[
