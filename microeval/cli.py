@@ -23,7 +23,8 @@ logger = logging.getLogger(__name__)
 
 setup_logging()
 
-load_dotenv()
+# Load .env from current working directory (important for uvx execution)
+load_dotenv(dotenv_path=Path.cwd() / ".env")
 
 app = cyclopts.App(name="microeval", help_format="markdown")
 
