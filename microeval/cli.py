@@ -6,6 +6,7 @@ import logging
 import os
 import shutil
 import threading
+from importlib.metadata import version
 
 import cyclopts
 import uvicorn
@@ -23,8 +24,20 @@ logger = logging.getLogger(__name__)
 
 setup_logging()
 
+# Log microeval version
+try:
+    _version = version("microeval")
+    logger.info(f"microeval version {_version}")
+except Exception:
+    logger.warning("microeval version unknown")
+
 # Load .env from current working directory (important for uvx execution)
-load_dotenv(dotenv_path=Path.cwd() / ".env")
+env_path = Path.cwd() / ".env"
+env_loaded = load_dotenv(dotenv_path=env_path)
+if env_loaded:
+    logger.info(f".env loaded from {env_path}")
+else:
+    logger.info(".env not found or not loaded")
 
 app = cyclopts.App(name="microeval", help_format="markdown")
 
