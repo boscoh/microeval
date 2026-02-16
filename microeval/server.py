@@ -281,9 +281,16 @@ async def evaluate(request: EvaluateRequest):
         logger.info(f"Running evaluation of {basename}")
         run_config = RunConfig(**config)
         run_config.save(config_path)
-        await Runner(config_path).run()
+        runner = Runner(config_path)
+        await runner.connect()
+    except Exception as e:
+        logger.error(f"Error connecting to LLM: {e}")
+        raise HTTPException(
+            status_code=500, detail=f"Error connecting to LLM: {str(e)}"
+        )
+    try:
+        await runner.run()
         return MessageResponse(message=f"Successfully evaluated {request.basename}")
-
     except Exception as e:
         logger.error(f"Error in evaluation: {str(e)}", exc_info=True)
         raise HTTPException(

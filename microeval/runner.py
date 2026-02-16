@@ -34,6 +34,14 @@ class Runner:
         self._eval_llm = get_eval_llm_client(self._config)
         self._cost_per_token = self._llm.get_token_cost()
         self._evaluation_runner = EvaluationRunner(self._eval_llm, self._config)
+        self._connected = False
+
+    async def connect(self) -> bool:
+        await self._llm.connect()
+        if self._eval_llm is not self._llm: 
+            await self._eval_llm.connect()
+        self._connected = True
+        return True
 
     async def run(self):
         try:
@@ -44,9 +52,8 @@ class Runner:
                 results_path.remove()
                 logger.info(f"Removed existing results file '{results_path}'")
 
-            await self._llm.connect()
-            if self._eval_llm is not self._llm:
-                await self._eval_llm.connect()
+            if not self._connected:
+                await self.connect()
 
             fields = self._config.evaluators + [
                 "elapsed_seconds",
@@ -121,9 +128,15 @@ class Runner:
 async def run_all(file_paths):
     for run_config in file_paths:
         try:
-            await Runner(run_config).run()
+            runner = Runner(run_config)
+            await runner.connect()
         except Exception as e:
-            logger.error(f"Job failed: {run_config} - {e}")
+            logger.error(f"Failed to connect to LLM for '{run_config}': {e}")
+            continue
+        try:
+            await runner.run()
+        except Exception as e:
+            logger.error(f"Job failed: '{run_config}' - {e}")
 
 
 def main():
