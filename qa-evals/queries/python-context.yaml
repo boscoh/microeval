@@ -1,4 +1,0 @@
----
-input: What is a context manager in Python?
-output: >-
-  A context manager in Python is an object that defines what happens when entering and exiting a runtime context, typically used with the 'with' statement. It ensures proper setup and cleanup of resources.

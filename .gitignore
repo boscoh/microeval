@@ -145,6 +145,12 @@ cython_debug/
 .vscode/
 *.code-workspace
 
+# Windsurf
+.windsurf
+
+# Agents
+AGENTS.md
+
 # macOS
 .DS_Store
 .AppleDouble
