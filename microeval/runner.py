@@ -1,4 +1,3 @@
-import asyncio
 import logging
 from statistics import mean, stdev
 
@@ -38,7 +37,7 @@ class Runner:
 
     async def connect(self) -> bool:
         await self._llm.connect()
-        if self._eval_llm is not self._llm: 
+        if self._eval_llm is not self._llm:
             await self._eval_llm.connect()
         self._connected = True
         return True
@@ -65,7 +64,9 @@ class Runner:
             response_texts = []
             run_id = Path(self._config.file_path).stem
             for i in range(self._config.repeat):
-                logger.info(f">>> Evaluate iteration {i + 1}/{self._config.repeat} {run_id}")
+                logger.info(
+                    f">>> Evaluate iteration {i + 1}/{self._config.repeat} {run_id}"
+                )
 
                 response = await self._llm.get_completion(
                     messages=[
@@ -137,33 +138,3 @@ async def run_all(file_paths):
             await runner.run()
         except Exception as e:
             logger.error(f"Job failed: '{run_config}' - {e}")
-
-
-def main():
-    import argparse
-
-    from microeval.logger import setup_logging
-
-    setup_logging()
-
-    parser = argparse.ArgumentParser(description="Run LLM evaluations")
-    parser.add_argument(
-        "evals_dir",
-        help="Base directory for evals (e.g., my-evals)",
-    )
-    args = parser.parse_args()
-
-    evals_dir.set_base(args.evals_dir)
-
-    logger.info(f"Running all configs in `./{evals_dir.runs}/*.yaml`")
-    file_paths = list(evals_dir.runs.glob("*.yaml"))
-
-    if not file_paths:
-        logger.warning(f"No config files found in {evals_dir.runs}")
-        return
-
-    asyncio.run(run_all(file_paths))
-
-
-if __name__ == "__main__":
-    main()

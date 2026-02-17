@@ -3,41 +3,28 @@
 import asyncio
 import json
 import logging
-import os
 import shutil
 import threading
-from importlib.metadata import version
 
 import cyclopts
 import uvicorn
-from dotenv import load_dotenv
 from path import Path
 
+from microeval import __version__
 from microeval.chat import main as chat_main
 from microeval.llm import LLMService, load_config
 from microeval.logger import setup_logging
 from microeval.runner import run_all
 from microeval.schemas import evals_dir
 from microeval.server import poll_and_open_browser
+from microeval.config import load_env
 
 logger = logging.getLogger(__name__)
 
 setup_logging()
+logger.info(f"microeval version {__version__}")
+load_env()
 
-# Log microeval version
-try:
-    _version = version("microeval")
-    logger.info(f"Running microeval version {_version}")
-except Exception:
-    logger.warning("microeval version unknown")
-
-# Load .env from current working directory (important for uvx execution)
-env_path = Path.cwd() / ".env"
-env_loaded = load_dotenv(dotenv_path=env_path)
-if env_loaded:
-    logger.info(f"Loaded .env from {env_path}")
-else:
-    logger.info("No .env file found")
 
 app = cyclopts.App(name="microeval", help_format="markdown")
 
@@ -63,7 +50,6 @@ def ui(
     :param reload: Enable auto-reload
     """
     evals_dir.set_base(base_dir)
-    os.environ["EVALS_DIR"] = base_dir
 
     poller_thread = threading.Thread(
         target=poll_and_open_browser, args=(port,), daemon=True
@@ -130,7 +116,6 @@ def _run_demo(template_name: str, base_dir: str, port: int):
         logger.info(f"Created models.json in {base_dir}")
 
     evals_dir.set_base(base_dir)
-    os.environ["EVALS_DIR"] = base_dir
 
     poller_thread = threading.Thread(
         target=poll_and_open_browser, args=(port,), daemon=True

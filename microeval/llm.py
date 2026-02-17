@@ -7,11 +7,13 @@ Simple chat client abstraction for LLM providers.
 - No langchain, litellm etc., just vendor-provided Python packages
 """
 
-import copy
+import configparser
 import json
 import logging
 import os
+import re
 import time
+import uuid
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from functools import lru_cache
@@ -23,7 +25,7 @@ import boto3
 import groq
 import ollama
 import openai
-from botocore.exceptions import ClientError, ProfileNotFound
+from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
@@ -54,9 +56,18 @@ def load_config() -> Dict[str, Any]:
                 "groq": ["llama-3.3-70b-versatile"],
             },
             "embed_models": {
-                "openai": ["text-embedding-3-small", "text-embedding-3-large", "text-embedding-ada-002"],
+                "openai": [
+                    "text-embedding-3-small",
+                    "text-embedding-3-large",
+                    "text-embedding-ada-002",
+                ],
                 "ollama": ["nomic-embed-text", "mxbai-embed-large", "all-minilm"],
-                "bedrock": ["amazon.titan-embed-text-v2:0", "amazon.titan-embed-text-v1", "cohere.embed-english-v3", "cohere.embed-multilingual-v3"],
+                "bedrock": [
+                    "amazon.titan-embed-text-v2:0",
+                    "amazon.titan-embed-text-v1",
+                    "cohere.embed-english-v3",
+                    "cohere.embed-multilingual-v3",
+                ],
             },
         }
     except json.JSONDecodeError as e:
@@ -81,7 +92,11 @@ def get_llm_client(client_type: LLMService, **kwargs) -> "SimpleLLMClient":
         default_models = config.get("chat_models", {}).get(client_type, [])
         if default_models:
             # Take the first model from the list as the default
-            kwargs["model"] = default_models[0] if isinstance(default_models, list) else default_models
+            kwargs["model"] = (
+                default_models[0]
+                if isinstance(default_models, list)
+                else default_models
+            )
 
     if client_type == "openai":
         return OpenAIClient(**kwargs)
@@ -297,8 +312,6 @@ class SimpleLLMClient(ABC):
 
 def parse_response_as_json_list(response):
     """Parse JSON from text response, extracting from markdown or .transactions if needed."""
-    import re
-
     if isinstance(response, dict):
         response_text = response.get("text", "")
     elif isinstance(response, str):
@@ -395,15 +408,21 @@ class OllamaClient(SimpleLLMClient):
                                 try:
                                     parsed_args = json.loads(args)
                                     new_func["arguments"] = parsed_args
-                                    logger.debug(f"Converted string args to dict: {args[:50]}...")
+                                    logger.debug(
+                                        f"Converted string args to dict: {args[:50]}..."
+                                    )
                                 except json.JSONDecodeError as e:
-                                    logger.warning(f"Failed to parse tool arguments: {args[:50]}... Error: {e}")
+                                    logger.warning(
+                                        f"Failed to parse tool arguments: {args[:50]}... Error: {e}"
+                                    )
                                     new_func["arguments"] = {}
                             else:
                                 new_func["arguments"] = {}
                         elif not isinstance(args, dict):
                             # Handle any other type by converting to dict
-                            logger.warning(f"Unexpected arguments type {type(args)}, converting to empty dict")
+                            logger.warning(
+                                f"Unexpected arguments type {type(args)}, converting to empty dict"
+                            )
                             new_func["arguments"] = {}
                         # If already a dict, keep it as is
 
@@ -448,7 +467,9 @@ class OllamaClient(SimpleLLMClient):
                                 )
                                 # Force convert to dict as fallback
                                 try:
-                                    tc["function"]["arguments"] = json.loads(args) if args else {}
+                                    tc["function"]["arguments"] = (
+                                        json.loads(args) if args else {}
+                                    )
                                 except json.JSONDecodeError:
                                     tc["function"]["arguments"] = {}
 
@@ -469,7 +490,7 @@ class OllamaClient(SimpleLLMClient):
             else:
                 message_obj = getattr(response, "message", None)
                 done_reason = getattr(response, "done_reason", "stop")
-                
+
                 if message_obj is not None and hasattr(message_obj, "model_dump"):
                     message_dict = message_obj.model_dump()
                 elif message_obj is not None:
@@ -479,10 +500,18 @@ class OllamaClient(SimpleLLMClient):
                     }
                 else:
                     message_dict = {}
-            
-            response_text = (message_dict.get("content") or "") if isinstance(message_dict, dict) else ""
-            raw_tool_calls = message_dict.get("tool_calls") if isinstance(message_dict, dict) else None
-            
+
+            response_text = (
+                (message_dict.get("content") or "")
+                if isinstance(message_dict, dict)
+                else ""
+            )
+            raw_tool_calls = (
+                message_dict.get("tool_calls")
+                if isinstance(message_dict, dict)
+                else None
+            )
+
             completion_tokens = len(response_text.split()) if response_text else 0
             prompt_tokens = sum(len((m.get("content") or "").split()) for m in messages)
             total_tokens = prompt_tokens + completion_tokens
@@ -490,19 +519,20 @@ class OllamaClient(SimpleLLMClient):
             tool_calls = None
             if raw_tool_calls:
                 tool_calls = []
-                import uuid
                 for idx, tool_call in enumerate(raw_tool_calls):
                     if isinstance(tool_call, dict) and "function" in tool_call:
                         func = tool_call["function"]
                         function_name = func.get("name", "")
                         function_args = func.get("arguments", {})
-                        tool_call_id = tool_call.get("id", f"call_{uuid.uuid4().hex[:8]}")
-                        
+                        tool_call_id = tool_call.get(
+                            "id", f"call_{uuid.uuid4().hex[:8]}"
+                        )
+
                         if isinstance(function_args, dict):
                             function_args = json.dumps(function_args)
                         elif not isinstance(function_args, str):
                             function_args = str(function_args)
-                        
+
                         tool_calls.append(
                             {
                                 "function": {
@@ -516,13 +546,16 @@ class OllamaClient(SimpleLLMClient):
                         function = tool_call.function
                         function_name = getattr(function, "name", "")
                         function_args = getattr(function, "arguments", {})
-                        tool_call_id = getattr(tool_call, "id", None) or f"call_{uuid.uuid4().hex[:8]}"
-                        
+                        tool_call_id = (
+                            getattr(tool_call, "id", None)
+                            or f"call_{uuid.uuid4().hex[:8]}"
+                        )
+
                         if isinstance(function_args, dict):
                             function_args = json.dumps(function_args)
                         elif not isinstance(function_args, str):
                             function_args = str(function_args)
-                        
+
                         tool_calls.append(
                             {
                                 "function": {
@@ -884,14 +917,12 @@ def get_aws_config(is_raise_exception: bool = True):
 
     # Discover available profiles from credentials file
     if os.path.exists(credentials_path):
-        import configparser
         config = configparser.ConfigParser()
         config.read(credentials_path)
         available_profiles.update(config.sections())
 
     # Discover available profiles from config file
     if os.path.exists(config_path):
-        import configparser
         config = configparser.ConfigParser()
         config.read(config_path)
         for section in config.sections():
@@ -907,7 +938,9 @@ def get_aws_config(is_raise_exception: bool = True):
         if profile_name in available_profiles:
             aws_config["profile_name"] = profile_name
         else:
-            logger.info(f"AWS profile '{profile_name}' not found, using default credential chain")
+            logger.info(
+                f"AWS profile '{profile_name}' not found, using default credential chain"
+            )
             profile_not_found = True
 
     region = os.getenv("AWS_REGION")
@@ -933,15 +966,17 @@ def get_aws_config(is_raise_exception: bool = True):
                     )
                 else:
                     raise ValueError(
-                        f"No AWS credentials found.\n"
-                        f"To configure: aws configure\n"
-                        f"Or set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY environment variables"
+                        "No AWS credentials found.\n"
+                        "To configure: aws configure\n"
+                        "Or set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY environment variables"
                     )
             return aws_config
 
         if not credentials.access_key or not credentials.secret_key:
             if is_raise_exception:
-                raise ValueError("Incomplete AWS credentials (missing access key or secret key)")
+                raise ValueError(
+                    "Incomplete AWS credentials (missing access key or secret key)"
+                )
             logger.warning("Incomplete AWS credentials")
             return aws_config
 
@@ -952,18 +987,25 @@ def get_aws_config(is_raise_exception: bool = True):
         # Check for SSO expiry with helpful error message
         if profile_name and profile_name in aws_config.get("profile_name", ""):
             if os.path.exists(config_path):
-                import configparser
                 config = configparser.ConfigParser()
                 config.read(config_path)
                 section = f"profile {profile_name}"
-                if config.has_section(section) and config.has_option(section, "sso_start_url"):
+                if config.has_section(section) and config.has_option(
+                    section, "sso_start_url"
+                ):
                     if hasattr(credentials, "token"):
                         creds = credentials.get_frozen_credentials()
-                        if hasattr(creds, "expiry_time") and creds.expiry_time < datetime.now(timezone.utc):
+                        if hasattr(
+                            creds, "expiry_time"
+                        ) and creds.expiry_time < datetime.now(timezone.utc):
                             login_cmd = f"aws sso login --profile {profile_name}"
                             if is_raise_exception:
-                                raise ValueError(f"AWS SSO session expired. Please run:\n  {login_cmd}")
-                            logger.warning(f"AWS SSO session expired. Please run: {login_cmd}")
+                                raise ValueError(
+                                    f"AWS SSO session expired. Please run:\n  {login_cmd}"
+                                )
+                            logger.warning(
+                                f"AWS SSO session expired. Please run: {login_cmd}"
+                            )
                             return aws_config
 
         return aws_config
@@ -977,17 +1019,20 @@ def get_aws_config(is_raise_exception: bool = True):
             # Check if SSO to provide better error message
             profile_to_check = aws_config.get("profile_name", profile_name)
             if profile_to_check and os.path.exists(config_path):
-                import configparser
                 config = configparser.ConfigParser()
                 config.read(config_path)
                 section = f"profile {profile_to_check}"
-                if config.has_section(section) and config.has_option(section, "sso_start_url"):
+                if config.has_section(section) and config.has_option(
+                    section, "sso_start_url"
+                ):
                     login_cmd = f"aws sso login --profile {profile_to_check}"
                     logger.warning(f"AWS SSO session expired. Please run: {login_cmd}")
                     return aws_config
             logger.warning("AWS credentials have expired")
         elif error_code == "InvalidClientTokenId":
-            logger.warning("AWS credentials are invalid. Please reconfigure: aws configure")
+            logger.warning(
+                "AWS credentials are invalid. Please reconfigure: aws configure"
+            )
         else:
             logger.warning(f"AWS API error: {error_code}")
     except Exception as e:

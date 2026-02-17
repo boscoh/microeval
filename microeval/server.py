@@ -12,16 +12,20 @@ from fastapi.responses import HTMLResponse
 from path import Path
 from pydantic import BaseModel
 
+from microeval import __version__
 from microeval.evaluator import get_available_evaluators
+from microeval.graph import extract_evaluation_data, generate_plotly_graph
 from microeval.llm import load_config
 from microeval.logger import setup_logging
 from microeval.runner import Runner
 from microeval.schemas import RunConfig, TableType, evals_dir, ext_from_table
+from microeval.config import load_env
 from microeval.yamlx import load_yaml, save_yaml
 
 logger = logging.getLogger(__name__)
 
 setup_logging()
+load_env()
 
 config = load_config()
 chat_models = config["chat_models"]
@@ -59,9 +63,9 @@ def save_content(content, file_path):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    base_dir = os.getenv("EVALS_DIR", "evals")
-    evals_dir.set_base(base_dir)
-    logger.info(f"Server initialized with evals_dir: {base_dir}")
+    evals_dir.set_base()
+    logger.info(f"microeval version {__version__}")
+    logger.info(f"Server initialized with evals_dir: {evals_dir.name}")
     yield
 
 
@@ -94,8 +98,6 @@ def serve_index():
 def get_graph_data():
     """Dynamically generates graph data from current results directory"""
     try:
-        from microeval.graph import extract_evaluation_data, generate_plotly_graph
-
         logger.info(f"Generating dynamic graph data from {evals_dir.results}")
 
         results_dir = evals_dir.results
@@ -156,12 +158,18 @@ def get_defaults():
             logger.warning(f"Failed to load {models_path}, using package default: {e}")
             chat_models_local = chat_models
     else:
-        logger.info(f"Using package default models.json")
+        logger.info("Using package default models.json")
         chat_models_local = chat_models
 
     default_service = "openai"
     models = chat_models_local.get(default_service, [])
-    default_model = models[0] if isinstance(models, list) and models else models if isinstance(models, str) else ""
+    default_model = (
+        models[0]
+        if isinstance(models, list) and models
+        else models
+        if isinstance(models, str)
+        else ""
+    )
 
     return {
         "content": {

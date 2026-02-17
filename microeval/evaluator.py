@@ -1,10 +1,14 @@
 import json
 import logging
+import re
 import textwrap
 from abc import ABC, abstractmethod
-from typing import Any, Dict, Optional, Type
+from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from pydantic import BaseModel
+
+if TYPE_CHECKING:
+    from microeval.schemas import RunConfig
 
 logger = logging.getLogger(__name__)
 
@@ -44,8 +48,6 @@ def parse_json_score(response_text: str) -> tuple[float, str]:
         return max(0.0, min(1.0, score)), reasoning
     except (json.JSONDecodeError, ValueError, TypeError):
         pass
-
-    import re
 
     numbers = re.findall(r"\b0?\.\d+\b|\b1(?:\.0+)?\b|\b0\b", response_text.strip())
     if numbers:
@@ -227,8 +229,6 @@ class WordCountEvaluator(BaseEvaluator):
 
 class EvaluationRunner:
     def __init__(self, llm, run_config):
-        from microeval.schemas import RunConfig
-
         self.llm = llm
         self.run_config: RunConfig = run_config
         self._evaluators: Dict[str, BaseEvaluator] = {}

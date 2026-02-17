@@ -62,8 +62,10 @@ class EvalsDir:
         }[table]
 
     def set_base(self, base_dir: str = None):
-        if base_dir is None:
-            base_dir = os.getenv("EVALS_DIR", "evals")
+        if base_dir is not None:
+            os.environ["EVALS_DIR"] = base_dir
+
+        base_dir = os.getenv("EVALS_DIR", "evals")
         self._base = Path(base_dir)
         for d in [self.prompts, self.queries, self.results, self.runs]:
             d.makedirs_p()
