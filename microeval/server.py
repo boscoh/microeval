@@ -15,7 +15,6 @@ from pydantic import BaseModel
 from microeval import __version__
 from microeval.evaluator import get_available_evaluators
 from microeval.graph import extract_evaluation_data, generate_plotly_graph
-from microeval.llm import load_config
 from microeval.logger import setup_logging
 from microeval.runner import Runner
 from microeval.schemas import RunConfig, TableType, evals_dir, ext_from_table
@@ -25,10 +24,6 @@ from microeval.yamlx import load_yaml, save_yaml
 logger = logging.getLogger(__name__)
 
 setup_logging()
-load_env()
-
-config = load_config()
-chat_models = config["chat_models"]
 
 
 async def get_json_from_request(request) -> Dict[str, Any]:
@@ -63,6 +58,7 @@ def save_content(content, file_path):
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+    load_env()
     evals_dir.set_base()
     logger.info(f"microeval version {__version__}")
     logger.info(f"Server initialized with evals_dir: {evals_dir.name}")
@@ -146,6 +142,9 @@ def get_defaults():
     """
     Response: { "content": object }
     """
+    from microeval.llm import load_config
+    chat_models = load_config()["chat_models"]
+
     # Try to load models.json from the eval directory, fall back to package default
     models_path = Path(evals_dir.name) / "models.json"
     if models_path.exists():
