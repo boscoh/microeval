@@ -163,20 +163,14 @@ class EquivalenceEvaluator(LLMEvaluator):
     def build_prompt(self, response_text: str) -> str:
         answer = self.run_config.output
         return textwrap.dedent(f"""
-            Compare the following two answers and determine how semantically equivalent they are.
-            Consider the meaning and key information, not just exact wording.
-            
-            Expected Answer: {answer}
-            
-            Actual Answer: {response_text}
-            
-            Rating scale:
-            - 1.0: answers are completely equivalent in meaning
-            - 0.5: answers are somewhat related but differ in important ways
-            - 0.0: answers are completely different or contradictory
-            
-            Respond with JSON in this exact format:
-            {{"score": <number between 0.0 and 1.0>, "reasoning": "<brief explanation>"}}
+            Rate the semantic equivalence of these two answers.
+
+            Expected: {answer}
+            Actual: {response_text}
+
+            Score must be exactly 0.0 (wrong or unrelated), 0.5 (correct but incomplete or imprecise), or 1.0 (fully equivalent).
+
+            Respond: {{"score": <0.0|0.5|1.0>, "reasoning": "<brief explanation>"}}
         """).strip()
 
 
