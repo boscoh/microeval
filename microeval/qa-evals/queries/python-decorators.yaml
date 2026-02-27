@@ -1,11 +1,4 @@
 ---
 input: What is the difference between `@staticmethod` and `@classmethod` in Python?
-output: >-
-  A `@staticmethod` takes no implicit first argument — it behaves like a
-  plain function namespaced inside the class, with no access to the class
-  or instance. A `@classmethod` receives the class itself as the first
-  argument (conventionally `cls`), giving it access to class state and
-  allowing subclasses to call it and receive their own class. Use
-  `@classmethod` for factory methods or when you need to reference the
-  class; use `@staticmethod` for utility functions logically grouped with
-  the class but not needing class or instance access.
+output: |
+  A `@staticmethod` takes no implicit first argument — it behaves like a plain function namespaced inside the class, with no access to the class or instance. A `@classmethod` receives the class itself as the first argument (conventionally `cls`), giving it access to class state and allowing subclasses to call it and receive their own class. Use `@classmethod` for factory methods or when you need to reference the class; use `@staticmethod` for utility functions logically grouped with the class but not needing class or instance access.

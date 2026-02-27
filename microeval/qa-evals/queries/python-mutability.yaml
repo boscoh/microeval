@@ -1,9 +1,4 @@
 ---
 input: What is the mutable default argument trap in Python, and how do you avoid it?
-output: >-
-  Python evaluates default arguments once at function definition time, not
-  on each call. When the default is a mutable object (list, dict, set),
-  that single object is shared across all calls, so mutations persist
-  between invocations — e.g. `def f(x=[])` accumulates items across calls.
-  The fix is to use `None` as the default and create the mutable object
-  inside the function body: `def f(x=None): x = [] if x is None else x`.
+output: |
+  Python evaluates default arguments once at function definition time, not on each call. When the default is a mutable object (list, dict, set), that single object is shared across all calls, so mutations persist between invocations — e.g. `def f(x=[])` accumulates items across calls. The fix is to use `None` as the default and create the mutable object inside the function body: `def f(x=None): x = [] if x is None else x`.
