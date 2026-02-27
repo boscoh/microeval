@@ -1,3 +1,4 @@
+import json
 import logging
 import re
 import textwrap
@@ -67,41 +68,64 @@ class LLMEvaluator(BaseEvaluator):
     def build_prompt(self, response_text: str) -> str:
         pass
 
+    def _score_tool(self) -> Dict[str, Any]:
+        return {
+            "type": "function",
+            "function": {
+                "name": "submit_score",
+                "description": "Submit the evaluation score and reasoning.",
+                "parameters": {
+                    "type": "object",
+                    "properties": {
+                        "score": {
+                            "type": "number",
+                            "enum": list(self.valid_scores),
+                            "description": "Numeric score from the allowed values.",
+                        },
+                        "reasoning": {
+                            "type": "string",
+                            "description": "Brief explanation of the score.",
+                        },
+                    },
+                    "required": ["score", "reasoning"],
+                },
+            },
+        }
+
     async def evaluate(self, response_text: str) -> Dict[str, Any]:
         if not response_text.strip():
             return self._empty_result(
                 score=0.0, reasoning="Empty response text provided"
             )
 
-        scores_str = "|".join(str(s) for s in self.valid_scores)
         prompt = self.build_prompt(response_text)
         messages = [
-            {
-                "role": "system",
-                "content": (
-                    "You are an evaluation assistant. "
-                    f'Respond with JSON only: {{"score": <{scores_str}>, "reasoning": "<explanation>"}}'
-                ),
-            },
+            {"role": "system", "content": "You are an evaluation assistant."},
             {"role": "user", "content": prompt},
         ]
 
-        response = await self.llm.get_completion(messages)
+        response = await self.llm.get_completion(messages, tools=[self._score_tool()])
 
         if "error" in response.get("metadata", {}):
             error_msg = response["metadata"]["error"]
             logger.error(f"LLM error in evaluation: {error_msg}")
             raise RuntimeError(f"LLM error: {error_msg}")
 
-        response_text = response.get("text", "")
-        data = parse_json(response_text)
-        if data is not None:
-            score = snap_score(float(data.get("score", 0.5)), self.valid_scores)
-            reasoning = data.get("reasoning", "") or response_text
+        tool_calls = response.get("tool_calls") or []
+        if tool_calls:
+            args = json.loads(tool_calls[0]["function"]["arguments"])
+            score = snap_score(float(args.get("score", 0.5)), self.valid_scores)
+            reasoning = args.get("reasoning", "") or response.get("text", "")
         else:
-            numbers = re.findall(r"\b0?\.\d+\b|\b1(?:\.0+)?\b|\b0\b", response_text)
-            score = snap_score(float(numbers[0]), self.valid_scores) if numbers else 0.5
-            reasoning = response_text
+            text = response.get("text", "")
+            data = parse_json(text)
+            if data is not None:
+                score = snap_score(float(data.get("score", 0.5)), self.valid_scores)
+                reasoning = data.get("reasoning", "") or text
+            else:
+                numbers = re.findall(r"\b0?\.\d+\b|\b1(?:\.0+)?\b|\b0\b", text)
+                score = snap_score(float(numbers[0]), self.valid_scores) if numbers else 0.5
+                reasoning = text
 
         return {
             "score": score,
