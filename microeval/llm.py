@@ -31,8 +31,6 @@ logger = logging.getLogger(__name__)
 
 AIOBOTO3_CLEANUP_DELAY_SECONDS = 0.1
 
-LLMService = Literal["openai", "ollama", "bedrock", "groq"]
-
 
 @lru_cache
 def load_config() -> Dict[str, Any]:
@@ -47,40 +45,31 @@ def load_config() -> Dict[str, Any]:
         return config
 
 
-def get_llm_client(client_type: LLMService, **kwargs) -> "SimpleLLMClient":
-    """Return a chat client satisfying the SimpleLLMClient interface.
-
-    :param client_type: One of ``'openai'``, ``'ollama'``, ``'bedrock'``, ``'groq'``.
-    :param kwargs: Passed to the client constructor; ``model`` defaults to the first entry in models.json.
-    :return: Configured SimpleLLMClient instance.
-    """
-    client_type = client_type.lower()
-
-    # Use config default model if not provided
-    if "model" not in kwargs:
-        config = load_config()
-        default_models = config.get("chat_models", {}).get(client_type, [])
-        if default_models:
-            # Take the first model from the list as the default
-            kwargs["model"] = (
-                default_models[0]
-                if isinstance(default_models, list)
-                else default_models
-            )
-
-    _clients = {
-        "openai": OpenAIClient,
-        "ollama": OllamaClient,
-        "bedrock": BedrockClient,
-        "groq": GroqClient,
-    }
-    if client_type not in _clients:
-        raise ValueError(f"Unknown chat client type: {client_type}")
-    return _clients[client_type](**kwargs)
-
-
 class SimpleLLMClient(ABC):
-    """Abstract base class for SimpleLLMClient, an API for LLM with async interface"""
+    """Async LLM client interface with a simplified, consistent message format.
+
+    The interface follows OpenAI's message structure closely, since it is the
+    de-facto standard and all major providers either adopt it or offer compatible
+    mappings. However, several OpenAI quirks are deliberately removed:
+
+    No choices wrapper
+        OpenAI wraps responses in a choices list to support multiple completions
+        (n > 1), which we never use. The single completion is returned directly
+        as {text, metadata, tool_calls}.
+
+    Flat usage metadata
+        Token counts and timing live in a single metadata.usage dict rather than
+        split across the response and a separate usage object.
+
+    Consistent tool-call structure
+        Assistant tool_calls use {id, function} on both input and output, so the
+        structure is symmetric. The raw Bedrock and Ollama APIs each use their
+        own conventions; we normalise to OpenAI's shape.
+
+    No type: "function" noise
+        The type field on tool call objects is omitted — it has always been
+        "function" and carries no information.
+    """
 
     @abstractmethod
     async def get_completion(
@@ -92,17 +81,16 @@ class SimpleLLMClient(ABC):
     ) -> Dict[str, Any]:
         """Get a chat completion from the model.
 
-        All implementations handle errors gracefully by returning the standardized
-        error format rather than raising exceptions.
-
-        Each message in ``messages`` is a dict with ``role`` (``'system'``,
-        ``'user'``, ``'assistant'``, or ``'tool'``) and ``content``.
-        Assistant messages may include ``tool_calls``; tool messages must include
-        ``tool_call_id``.  Tool call dicts use the OpenAI structure::
+        Each message has a role: system, user, assistant, or tool.
+        Assistant messages may carry tool_calls; tool messages must include
+        tool_call_id referencing the call. Tool calls use the structure::
 
             {
               "id": "call_123",
-              "function": {"name": "...", "arguments": "..."}
+              "function": {
+                "name": "get_weather",
+                "arguments": "{\"location\": \"Paris\"}"
+              }
             }
 
         :param messages: Conversation history as a list of message dicts.
@@ -1151,3 +1139,35 @@ class BedrockClient(SimpleLLMClient):
             logger.error(f"Error calling Bedrock embed: {e}")
             raise RuntimeError(f"Error generating embedding: {str(e)}")
 
+
+LLM_CLIENTS = {
+    "openai": OpenAIClient,
+    "ollama": OllamaClient,
+    "bedrock": BedrockClient,
+    "groq": GroqClient,
+}
+
+LLMService = Literal[*LLM_CLIENTS]
+
+
+def get_llm_client(client_type: LLMService, **kwargs) -> SimpleLLMClient:
+    """Return a chat client satisfying the SimpleLLMClient interface.
+
+    :param client_type: One of ``'openai'``, ``'ollama'``, ``'bedrock'``, ``'groq'``.
+    :param kwargs: Passed to the client constructor; ``model`` defaults to the first entry in models.json.
+    :return: Configured SimpleLLMClient instance.
+    """
+    client_type = client_type.lower()
+
+    if "model" not in kwargs:
+        default_models = load_config().get("chat_models", {}).get(client_type, [])
+        if default_models:
+            kwargs["model"] = (
+                default_models[0]
+                if isinstance(default_models, list)
+                else default_models
+            )
+
+    if client_type not in LLM_CLIENTS:
+        raise ValueError(f"Unknown chat client type: {client_type}")
+    return LLM_CLIENTS[client_type](**kwargs)

@@ -5,7 +5,7 @@ from typing import Dict, List
 
 from path import Path
 
-from microeval.yamlx import load_yaml
+from microeval.utils import load_yaml
 
 logger = logging.getLogger(__name__)
 

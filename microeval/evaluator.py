@@ -1,4 +1,3 @@
-import json
 import logging
 import re
 import textwrap
@@ -7,10 +6,14 @@ from typing import TYPE_CHECKING, Any, Dict, Optional, Type
 
 from pydantic import BaseModel
 
+from microeval.utils import parse_json, snap_score
+
 if TYPE_CHECKING:
     from microeval.schemas import RunConfig
 
 logger = logging.getLogger(__name__)
+
+_VALID_SCORES = (0.0, 0.5, 1.0)
 
 EVALUATOR_REGISTRY: Dict[str, Type["BaseEvaluator"]] = {}
 
@@ -34,26 +37,6 @@ class EvalResult(BaseModel):
     token_count: int = 0
 
 
-def parse_json_score(response_text: str) -> tuple[float, str]:
-    """Parse JSON response, falls back to regex extraction if JSON fails."""
-    try:
-        text = response_text.strip()
-        if text.startswith("```"):
-            lines = text.split("\n")
-            text = "\n".join(lines[1:-1] if lines[-1].strip() == "```" else lines[1:])
-
-        data = json.loads(text)
-        score = float(data.get("score", 0.5))
-        reasoning = data.get("reasoning", "")
-        return max(0.0, min(1.0, score)), reasoning
-    except (json.JSONDecodeError, ValueError, TypeError):
-        pass
-
-    numbers = re.findall(r"\b0?\.\d+\b|\b1(?:\.0+)?\b|\b0\b", response_text.strip())
-    if numbers:
-        return max(0.0, min(1.0, float(numbers[0]))), ""
-
-    return 0.5, ""
 
 
 class BaseEvaluator(ABC):
@@ -78,6 +61,8 @@ class BaseEvaluator(ABC):
 
 
 class LLMEvaluator(BaseEvaluator):
+    valid_scores: tuple = _VALID_SCORES
+
     @abstractmethod
     def build_prompt(self, response_text: str) -> str:
         pass
@@ -88,11 +73,15 @@ class LLMEvaluator(BaseEvaluator):
                 score=0.0, reasoning="Empty response text provided"
             )
 
+        scores_str = "|".join(str(s) for s in self.valid_scores)
         prompt = self.build_prompt(response_text)
         messages = [
             {
                 "role": "system",
-                "content": "You are a helpful evaluation assistant. Always respond with valid JSON.",
+                "content": (
+                    "You are an evaluation assistant. "
+                    f'Respond with JSON only: {{"score": <{scores_str}>, "reasoning": "<explanation>"}}'
+                ),
             },
             {"role": "user", "content": prompt},
         ]
@@ -105,35 +94,22 @@ class LLMEvaluator(BaseEvaluator):
             raise RuntimeError(f"LLM error: {error_msg}")
 
         response_text = response.get("text", "")
-        score, reasoning = parse_json_score(response_text)
+        data = parse_json(response_text)
+        if data is not None:
+            score = snap_score(float(data.get("score", 0.5)), self.valid_scores)
+            reasoning = data.get("reasoning", "") or response_text
+        else:
+            numbers = re.findall(r"\b0?\.\d+\b|\b1(?:\.0+)?\b|\b0\b", response_text)
+            score = snap_score(float(numbers[0]), self.valid_scores) if numbers else 0.5
+            reasoning = response_text
 
         return {
             "score": score,
-            "reasoning": reasoning or response_text,
+            "reasoning": reasoning,
             "elapsed_ms": response.get("elapsed_ms", 0),
             "token_count": response.get("token_count", 0),
         }
 
-
-@register_evaluator("coherence")
-class CoherenceEvaluator(LLMEvaluator):
-    def build_prompt(self, response_text: str) -> str:
-        question = self.run_config.input or ""
-        return textwrap.dedent(f"""
-            Evaluate the coherence of the following answer to the given question.
-            
-            Coherence means:
-            - The answer is logically structured
-            - Ideas flow naturally from one to another
-            - The response is internally consistent
-            - The language is clear and well-organized
-            
-            Question: {question}
-            Answer: {response_text}
-            
-            Respond with JSON in this exact format:
-            {{"score": <number between 0.0 and 1.0>, "reasoning": "<brief explanation>"}}
-        """).strip()
 
 
 @register_evaluator("equivalence")
@@ -163,14 +139,40 @@ class EquivalenceEvaluator(LLMEvaluator):
     def build_prompt(self, response_text: str) -> str:
         answer = self.run_config.output
         return textwrap.dedent(f"""
-            Rate the semantic equivalence of these two answers.
+            Compare these two answers for semantic equivalence. Ignore differences in formatting, capitalization, or phrasing that preserve the same meaning.
 
-            Expected: {answer}
-            Actual: {response_text}
+            Answer A: {answer}
+            Answer B: {response_text}
 
-            Score must be exactly 0.0 (wrong or unrelated), 0.5 (correct but incomplete or imprecise), or 1.0 (fully equivalent).
+            First, briefly explain what each answer says and whether the core meaning matches.
 
-            Respond: {{"score": <0.0|0.5|1.0>, "reasoning": "<brief explanation>"}}
+            Then assign a score:
+            - 1.0: fully equivalent (same meaning, same key facts, no meaningful omissions)
+            - 0.5: partially correct (right topic/direction but missing key details, imprecise, or adds significant unsupported claims)
+            - 0.0: incorrect or unrelated (wrong answer, contradicts Answer A, or off-topic)
+        """).strip()
+
+
+@register_evaluator("relevance")
+class RelevanceEvaluator(LLMEvaluator):
+    valid_scores = (0.0, 0.25, 0.5, 0.75, 1.0)
+
+    def build_prompt(self, response_text: str) -> str:
+        question = self.run_config.input or ""
+        return textwrap.dedent(f"""
+            Rate how well the following response addresses the question. Consider whether it stays on topic, covers the key aspects of the question, and avoids irrelevant content.
+
+            Question: {question}
+            Response: {response_text}
+
+            First, briefly identify what the question is asking and whether the response addresses those points.
+
+            Then assign a score:
+            - 1.0: fully addresses the question with no irrelevant content
+            - 0.75: mostly addresses the question with minor gaps or slight tangents
+            - 0.5: partially addresses the question but misses significant aspects or includes substantial irrelevant content
+            - 0.25: tangentially related but largely fails to address the question
+            - 0.0: completely off-topic or does not engage with the question at all
         """).strip()
 
 

@@ -19,7 +19,7 @@ from microeval.logger import setup_logging
 from microeval.runner import Runner
 from microeval.schemas import RunConfig, TableType, evals_dir, ext_from_table
 from microeval.config import load_env
-from microeval.yamlx import load_yaml, save_yaml
+from microeval.utils import load_yaml, save_yaml
 
 logger = logging.getLogger(__name__)
 

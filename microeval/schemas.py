@@ -7,7 +7,7 @@ from path import Path
 from pydantic import BaseModel, Field
 
 from microeval.llm import LLMService
-from microeval.yamlx import load_yaml, save_yaml
+from microeval.utils import load_yaml, save_yaml
 
 logger = logging.getLogger(__name__)
 

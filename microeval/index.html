@@ -68,6 +68,19 @@
         right: 20px;
         z-index: 1100;
       }
+      .saving-indicator {
+        opacity: 0;
+        padding-left: 1.2rem;
+        color: #20c997;
+        transition: opacity 0.3s ease;
+      }
+      .saving-indicator.visible {
+        opacity: 1;
+      }
+      .saving-indicator.fading {
+        opacity: 0;
+        transition: opacity 0.8s ease;
+      }
     </style>
   </head>
 
@@ -196,13 +209,7 @@
 
                     .d-flex.align-items-center
                       h3.mb-0 Run [{{selectedRunName}}]
-                      button.btn.btn-success.ms-3(@click="saveRunConfig" :disabled="isSavingRunConfig")
-                        span.spinner-border.spinner-border-sm(
-                          v-if="isSavingRunConfig"
-                          role="status"
-                          aria-hidden="true"
-                        )
-                        | {{ isSavingRunConfig ? ' saving...' : 'save' }}
+                      span.small.saving-indicator(:class="{visible: showSavingRun, fading: fadingSavingRun}") saving...
 
                     .mt-4.d-flex.flex-wrap.align-items-start.gap-3
                       .d-flex.align-items-center.gap-2
@@ -268,7 +275,6 @@
                         rows="8"
                         v-model="runConfig.prompt"
                         placeholder="Please summarize the skills of this candidate."
-                        readonly
                       )
 
                     .d-flex.flex-row.align-items-end
@@ -286,7 +292,6 @@
                         rows="8"
                         v-model="runConfig.input"
                         placeholder="A humble query"
-                        readonly
                       )
 
                     h6.mt-4 Output:
@@ -295,7 +300,6 @@
                         rows="8"
                         v-model="runConfig.output"
                         placeholder="expected"
-                        readonly
                       )
 
                 //// Run tab - right column
@@ -375,13 +379,7 @@
                   .px-3.pt-4
                     .d-flex.align-items-center
                       h3.mb-0 Query [{{selectedQueryRef}}]
-                      button.btn.btn-success.ms-3(
-                        @click="saveQuery" :disabled="isSavingPrompt"
-                      )
-                        span.spinner-border.spinner-border-sm(
-                          v-if="isSavingPrompt" role="status" aria-hidden="true"
-                        )
-                        | {{ isSavingPrompt ? ' saving...' : 'save' }}
+                      span.small.saving-indicator(:class="{visible: showSavingQuery, fading: fadingSavingQuery}") saving...
 
                   .d-flex.flex-row.flex-grow-1.px-3.pb-3.gap-3
                     .d-flex.flex-column.flex-grow-1
@@ -438,13 +436,7 @@
 
                     .d-flex.align-items-center
                       h3.mb-0 Prompt [{{selectedPromptRef}}]
-                      button.btn.btn-success.ms-3(
-                        @click="savePrompt" :disabled="isSavingPrompt"
-                      )
-                        span.spinner-border.spinner-border-sm(
-                          v-if="isSavingPrompt" role="status" aria-hidden="true"
-                        )
-                        | {{ isSavingPrompt ? ' saving...' : 'save' }}
+                      span.small.saving-indicator(:class="{visible: showSavingPrompt, fading: fadingSavingPrompt}") saving...
 
                     textarea.form-control.flex-grow-1.mt-3(style="resize: none; min-height: 200px;" v-model="selectedPrompt")
 
@@ -590,6 +582,47 @@
       const isEvaluatingByRun = ref({});
       const isRunningAll = ref(false);
       const isSavingRunConfig = ref(false);
+      const isLoadingRun = ref(false);
+      const isLoadingPrompt = ref(false);
+      const isLoadingQuery = ref(false);
+
+      function makeSavingIndicator() {
+        const show = ref(false);
+        const fading = ref(false);
+        let timer = null;
+        let startTime = 0;
+        return {
+          show, fading,
+          start() {
+            show.value = true;
+            fading.value = false;
+            startTime = Date.now();
+            if (timer) clearTimeout(timer);
+          },
+          end() {
+            const remaining = Math.max(0, 1000 - (Date.now() - startTime));
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(() => {
+              fading.value = true;
+              timer = setTimeout(() => {
+                show.value = false;
+                fading.value = false;
+              }, 800);
+            }, remaining);
+          },
+        };
+      }
+
+      const runSaving = makeSavingIndicator();
+      const promptSaving = makeSavingIndicator();
+      const querySaving = makeSavingIndicator();
+
+      const showSavingRun = runSaving.show;
+      const fadingSavingRun = runSaving.fading;
+      const showSavingPrompt = promptSaving.show;
+      const fadingSavingPrompt = promptSaving.fading;
+      const showSavingQuery = querySaving.show;
+      const fadingSavingQuery = querySaving.fading;
       const sampleOutput = ref("");
 
       const promptRefs = ref([]);
@@ -728,10 +761,15 @@
       }
 
       async function loadRunConfig(runName) {
-        runConfig.value = await fetchObject("run", runName);
-        await choosePromptOfRun(runConfig.value.promptRef);
-        if (runConfig.value.queryRef) {
-          await chooseQueryOfRun(runConfig.value.queryRef);
+        isLoadingRun.value = true;
+        try {
+          runConfig.value = await fetchObject("run", runName);
+          await choosePromptOfRun(runConfig.value.promptRef);
+          if (runConfig.value.queryRef) {
+            await chooseQueryOfRun(runConfig.value.queryRef);
+          }
+        } finally {
+          isLoadingRun.value = false;
         }
       }
 
@@ -860,21 +898,29 @@
         }
       }
 
-      async function saveRunConfig() {
-        if (!selectedRunName.value) return;
-
-        isSavingRunConfig.value = true;
-
+      const debouncedAutoSave = _.debounce(async () => {
+        if (!selectedRunName.value || isLoadingRun.value) return;
+        runSaving.start();
         try {
           await saveObject("run", selectedRunName.value, runConfig.value);
-          showNotification("Run config saved successfully!");
+          if (runConfig.value.promptRef && runConfig.value.prompt !== undefined) {
+            await saveObject("prompt", runConfig.value.promptRef, runConfig.value.prompt);
+          }
+          if (runConfig.value.queryRef) {
+            await saveObject("query", runConfig.value.queryRef, {
+              input: runConfig.value.input,
+              output: runConfig.value.output,
+            });
+          }
         } catch (error) {
-          console.error("Failed to save run config:", error);
-          showNotification("Failed to save run config", "danger");
+          console.error("Auto-save failed:", error);
+          showNotification("Auto-save failed", "danger");
         } finally {
-          isSavingRunConfig.value = false;
+          runSaving.end();
         }
-      }
+      }, 600);
+
+      watch(runConfig, debouncedAutoSave, { deep: true });
 
       async function createRun(name) {
         if (!name) return;
@@ -925,57 +971,55 @@
       }
 
       async function chooseSelectedPrompt(promptName) {
-        selectedPromptRef.value = promptName;
-        selectedPrompt.value = "";
-        selectedPrompt.value = await fetchObject("prompt", promptName);
+        isLoadingPrompt.value = true;
+        try {
+          selectedPromptRef.value = promptName;
+          selectedPrompt.value = "";
+          selectedPrompt.value = await fetchObject("prompt", promptName);
+        } finally {
+          isLoadingPrompt.value = false;
+        }
       }
 
       async function chooseSelectedQuery(queryName) {
-        selectedQueryRef.value = queryName;
-        selectedQuery.value = "";
-        selectedQuery.value = await fetchObject("query", queryName);
-      }
-
-      async function saveQuery() {
-        if (!selectedQueryRef.value) return;
-
-        isSavingQuery.value = true;
-
+        isLoadingQuery.value = true;
         try {
-          await saveObject(
-            "query",
-            selectedQueryRef.value,
-            selectedQuery.value,
-          );
-          await loadQueryRefs();
-          showNotification("Query saved successfully!");
-        } catch (error) {
-          console.error("Failed to save query:", error);
-          showNotification("Failed to save query", "danger");
+          selectedQueryRef.value = queryName;
+          selectedQuery.value = "";
+          selectedQuery.value = await fetchObject("query", queryName);
         } finally {
-          isSavingQuery.value = false;
+          isLoadingQuery.value = false;
         }
       }
 
-      async function savePrompt() {
-        if (!selectedPromptRef.value) return;
-
-        isSavingPrompt.value = true;
-
+      const debouncedAutoSavePrompt = _.debounce(async () => {
+        if (!selectedPromptRef.value || isLoadingPrompt.value) return;
+        promptSaving.start();
         try {
-          await saveObject(
-            "prompt",
-            selectedPromptRef.value,
-            selectedPrompt.value,
-          );
-          await loadPromptRefs();
-          showNotification("System prompt saved successfully!");
+          await saveObject("prompt", selectedPromptRef.value, selectedPrompt.value);
         } catch (error) {
-          showNotification("Failed to save system prompt", "danger");
+          console.error("Auto-save prompt failed:", error);
+          showNotification("Auto-save failed", "danger");
         } finally {
-          isSavingPrompt.value = false;
+          promptSaving.end();
         }
-      }
+      }, 600);
+
+      const debouncedAutoSaveQuery = _.debounce(async () => {
+        if (!selectedQueryRef.value || isLoadingQuery.value) return;
+        querySaving.start();
+        try {
+          await saveObject("query", selectedQueryRef.value, selectedQuery.value);
+        } catch (error) {
+          console.error("Auto-save query failed:", error);
+          showNotification("Auto-save failed", "danger");
+        } finally {
+          querySaving.end();
+        }
+      }, 600);
+
+      watch(selectedPrompt, debouncedAutoSavePrompt, { deep: true });
+      watch(selectedQuery, debouncedAutoSaveQuery, { deep: true });
 
       function closeBootstrapModal(modalId) {
         const modal = bootstrap.Modal.getInstance(
@@ -1246,7 +1290,6 @@
         promptRefs,
         selectedPromptRef,
         selectedPrompt,
-        isSavingPrompt,
         queryRefs,
         selectedQueryRef,
         selectedQuery,
@@ -1265,6 +1308,12 @@
         isEvaluatingByRun,
         isRunningAll,
         isSavingRunConfig,
+        showSavingRun,
+        fadingSavingRun,
+        showSavingPrompt,
+        fadingSavingPrompt,
+        showSavingQuery,
+        fadingSavingQuery,
 
         // Methods
         chooseRun,
@@ -1272,14 +1321,11 @@
         runEvaluation,
         runEvaluationForRun,
         runAllEvaluations,
-        saveRunConfig,
         chooseQueryOfRun,
         choosePromptOfRun,
         chooseSelectedPrompt,
-        savePrompt,
         createPrompt,
         chooseSelectedQuery,
-        saveQuery,
         createQuery,
         closeBootstrapModal,
         openDeleteConfirm,
