@@ -6,7 +6,7 @@ from path import Path
 from microeval.evaluator import EvaluationRunner
 from microeval.llm import get_llm_client
 from microeval.schemas import RunConfig, RunResult, evals_dir
-from microeval.yamlx import save_yaml
+from microeval.utils import save_yaml
 
 logger = logging.getLogger(__name__)
 
@@ -31,7 +31,6 @@ class Runner:
         self._config = RunConfig.read_from_yaml(file_path)
         self._llm = get_llm_client(self._config.service, model=self._config.model)
         self._eval_llm = get_eval_llm_client(self._config)
-        self._cost_per_token = self._llm.get_token_cost()
         self._evaluation_runner = EvaluationRunner(self._eval_llm, self._config)
         self._connected = False
 
@@ -76,22 +75,16 @@ class Runner:
                     temperature=self._config.temperature,
                 )
 
-                # Check if the response contains an error
-                if "error" in response.get("metadata", {}):
-                    error_msg = response["metadata"]["error"]
-                    logger.error(f"Chat client error: {error_msg}")
-                    raise RuntimeError(f"Chat client error: {error_msg}")
-
                 response_texts.append(response["text"])
 
                 elapsed_seconds = response["metadata"]["usage"]["elapsed_seconds"]
                 logger.debug(f"ElapsedSeconds: {elapsed_seconds}")
 
-                token_count = response["metadata"]["usage"].get("total_tokens", 0)
-                cost_value = (
-                    token_count * self._cost_per_token / 1000
-                    if token_count is not None
-                    else None
+                usage = response["metadata"]["usage"]
+                token_count = usage.get("total_tokens", 0)
+                cost_value = self._llm.get_token_cost(
+                    usage.get("prompt_tokens", 0),
+                    usage.get("completion_tokens", 0),
                 )
                 logger.debug(f"TokenCount: {token_count}")
 

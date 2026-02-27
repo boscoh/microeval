@@ -7,11 +7,11 @@ Simple chat client abstraction for LLM providers.
 - No langchain, litellm etc., just vendor-provided Python packages
 """
 
+import asyncio
 import configparser
 import json
 import logging
 import os
-import re
 import time
 import uuid
 from abc import ABC, abstractmethod
@@ -29,60 +29,30 @@ from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
+AIOBOTO3_CLEANUP_DELAY_SECONDS = 0.1
+
 LLMService = Literal["openai", "ollama", "bedrock", "groq"]
 
 
+@lru_cache
 def load_config() -> Dict[str, Any]:
-    """
-    Load and return the models configuration from models.json.
+    """Load and return the models configuration from models.json.
 
-    Returns:
-        Dict[str, Any]: Configuration dictionary with chat_models and embed_models
+    :return: Configuration dictionary with chat_models, embed_models, and pricing.
     """
     config_path = Path(__file__).parent / "models.json"
-    try:
-        with open(config_path, "r") as f:
-            config = json.load(f)
-            logger.info(f"Loaded selectable models from '{config_path}'")
-            return config
-    except FileNotFoundError:
-        logger.warning(f"Config file not found at {config_path}, using fallback config")
-        # Fallback config if file doesn't exist
-        return {
-            "chat_models": {
-                "bedrock": ["amazon.nova-pro-v1:0"],
-                "openai": ["gpt-4o"],
-                "ollama": ["llama3.2"],
-                "groq": ["llama-3.3-70b-versatile"],
-            },
-            "embed_models": {
-                "openai": [
-                    "text-embedding-3-small",
-                    "text-embedding-3-large",
-                    "text-embedding-ada-002",
-                ],
-                "ollama": ["nomic-embed-text", "mxbai-embed-large", "all-minilm"],
-                "bedrock": [
-                    "amazon.titan-embed-text-v2:0",
-                    "amazon.titan-embed-text-v1",
-                    "cohere.embed-english-v3",
-                    "cohere.embed-multilingual-v3",
-                ],
-            },
-        }
-    except json.JSONDecodeError as e:
-        logger.error(f"Error parsing models.json: {e}")
-        raise
+    with open(config_path, "r") as f:
+        config = json.load(f)
+        logger.info(f"Loaded selectable models from '{config_path}'")
+        return config
 
 
 def get_llm_client(client_type: LLMService, **kwargs) -> "SimpleLLMClient":
-    """
-    Gets a chat client that satisfies SimpleLLMClient interface.
+    """Return a chat client satisfying the SimpleLLMClient interface.
 
-    Args:
-        client_type: "openai", "ollama", "bedrock", or "groq"
-        **kwargs: Additional keyword arguments specific to the chat client type:
-            - model: str (optional, defaults from models.json if not provided)
+    :param client_type: One of ``'openai'``, ``'ollama'``, ``'bedrock'``, ``'groq'``.
+    :param kwargs: Passed to the client constructor; ``model`` defaults to the first entry in models.json.
+    :return: Configured SimpleLLMClient instance.
     """
     client_type = client_type.lower()
 
@@ -98,15 +68,15 @@ def get_llm_client(client_type: LLMService, **kwargs) -> "SimpleLLMClient":
                 else default_models
             )
 
-    if client_type == "openai":
-        return OpenAIClient(**kwargs)
-    if client_type == "ollama":
-        return OllamaClient(**kwargs)
-    if client_type == "bedrock":
-        return BedrockClient(**kwargs)
-    if client_type == "groq":
-        return GroqClient(**kwargs)
-    raise ValueError(f"Unknown chat client type: {client_type}")
+    _clients = {
+        "openai": OpenAIClient,
+        "ollama": OllamaClient,
+        "bedrock": BedrockClient,
+        "groq": GroqClient,
+    }
+    if client_type not in _clients:
+        raise ValueError(f"Unknown chat client type: {client_type}")
+    return _clients[client_type](**kwargs)
 
 
 class SimpleLLMClient(ABC):
@@ -120,167 +90,44 @@ class SimpleLLMClient(ABC):
         max_tokens: Optional[int] = None,
         temperature: float = 0.0,
     ) -> Dict[str, Any]:
-        """
-        Get a chat completion from the model.
+        """Get a chat completion from the model.
 
-        Note:
-            - All implementations should handle errors gracefully by returning
-              the standardized error format rather than raising exceptions
-            - Tool/function calling support varies by provider
-            - Token counting methods may vary between providers
+        All implementations handle errors gracefully by returning the standardized
+        error format rather than raising exceptions.
 
-        Args:
-            messages: List of message dictionaries representing the conversation history.
-                Each message dict must contain:
-                - 'role': str - One of 'system', 'user', 'assistant', or 'tool'
-                - 'content': str | None - The message content/text (None allowed for assistant with tool_calls)
-                - 'name': str (optional) - Name of the message sender
+        Each message in ``messages`` is a dict with ``role`` (``'system'``,
+        ``'user'``, ``'assistant'``, or ``'tool'``) and ``content``.
+        Assistant messages may include ``tool_calls``; tool messages must include
+        ``tool_call_id``.  Tool call dicts use the OpenAI structure::
 
-                Message types:
-
-                1. System messages (role='system'):
-                   - 'role': 'system' (required)
-                   - 'content': str (required) - System instructions or context
-                   - 'name': str (optional) - Name identifier
-
-                2. User messages (role='user'):
-                   - 'role': 'user' (required)
-                   - 'content': str (required) - User's message text
-                   - 'name': str (optional) - Name identifier
-
-                3. Assistant messages (role='assistant'):
-                   - 'role': 'assistant' (required)
-                   - 'content': str | None (optional) - Assistant's response text
-                     Can be None if only tool_calls are present
-                   - 'tool_calls': list[dict] (optional) - List of tool calls when assistant wants to use tools
-                     Each tool call dict contains:
-                     - 'id': str - Unique identifier for this tool call
-                     - 'type': str - Usually 'function'
-                     - 'function': dict - Function call details:
-                       - 'name': str - Name of the function to call
-                       - 'arguments': str - JSON string of function arguments
-                   - 'name': str (optional) - Name identifier
-
-                4. Tool messages (role='tool'):
-                   - 'role': 'tool' (required)
-                   - 'content': str (required) - Result of the tool execution
-                   - 'tool_call_id': str (required) - ID of the tool call this result corresponds to
-                   - 'status': str (optional) - Status of tool execution: 'success' or 'error'
-                   - 'name': str (optional) - Name identifier
-
-                Example:
-                [
-                    {'role': 'system', 'content': 'You are a helpful assistant.'},
-                    {'role': 'user', 'content': 'What is the weather in Paris?'},
-                    {
-                        'role': 'assistant',
-                        'content': None,
-                        'tool_calls': [
-                            {
-                                'id': 'call_123',
-                                'type': 'function',
-                                'function': {
-                                    'name': 'get_weather',
-                                    'arguments': '{"location": "Paris"}'
-                                }
-                            }
-                        ]
-                    },
-                    {
-                        'role': 'tool',
-                        'content': 'Sunny, 22°C',
-                        'tool_call_id': 'call_123',
-                        'status': 'success'
-                    },
-                    {'role': 'assistant', 'content': 'The weather in Paris is sunny and 22°C.'}
-                ]
-
-            tools: Optional list of tool/function definitions for function calling.
-                Each tool dict must contain:
-                - 'type': str - Tool type (typically 'function')
-                - 'function': dict - Function specification sub-dictionary containing:
-                  - 'name': str (required) - Function name, must be unique
-                  - 'description': str (required) - Function description explaining what it does
-                  - 'parameters': dict (required) - JSON Schema object defining the function parameters
-                    The parameters dict must follow JSON Schema format with:
-                    - 'type': str - Usually 'object'
-                    - 'properties': dict - Dictionary of parameter definitions
-                      Each property should have 'type' (e.g., 'string', 'number', 'boolean')
-                    - 'required': list[str] (optional) - List of required parameter names
-
-                Example:
-                [{
-                    'type': 'function',
-                    'function': {
-                        'name': 'get_weather',
-                        'description': 'Get current weather for a location',
-                        'parameters': {
-                            'type': 'object',
-                            'properties': {
-                                'location': {
-                                    'type': 'string',
-                                    'description': 'City name or location'
-                                },
-                                'unit': {
-                                    'type': 'string',
-                                    'enum': ['celsius', 'fahrenheit'],
-                                    'description': 'Temperature unit'
-                                }
-                            },
-                            'required': ['location']
-                        }
-                    }
-                }]
-
-            max_tokens: Maximum number of tokens to generate in the completion.
-                If None, uses the model's default limit. Different models have
-                different default and maximum token limits.
-
-            temperature: Controls randomness in generation (0.0 to 1.0).
-                - 0.0: Deterministic, always picks most likely token
-                - 1.0: Maximum randomness
-                - Values between 0.1-0.7 are typically good for most use cases
-
-        Returns:
-            Dict[str, Any]: Standardized response dictionary containing:
             {
-                'text': str,
-                'metadata': {
-                    'usage': {
-                        'prompt_tokens': int,
-                        'completion_tokens': int,
-                        'total_tokens': int,
-                        'elapsed_seconds': float
-                    },
-                    'model': str,
-                    'finish_reason': str
-                },
-                'tool_calls': [
-                    {
-                        'function': {
-                            'name': str,
-                            'arguments': str,
-                            'tool_call_id': str
-                        }
-                    }
-                ] | None
+              "id": "call_123",
+              "function": {"name": "...", "arguments": "..."}
             }
 
-            On error, returns:
-            {
-                'text': 'Error: <error_message>',
-                'metadata': {
-                    'usage': {
-                        'prompt_tokens': 0,
-                        'completion_tokens': 0,
-                        'total_tokens': 0,
-                        'elapsed_seconds': float
+        :param messages: Conversation history as a list of message dicts.
+        :param tools: Optional list of tool/function definitions (JSON Schema format).
+        :param max_tokens: Maximum tokens to generate; uses model default if None.
+        :param temperature: Sampling temperature 0.0–1.0 (0.0 = deterministic).
+        :return: On success::
+
+                {
+                  "text": str,
+                  "metadata": {
+                    "usage": {
+                      "prompt_tokens": int,
+                      "completion_tokens": int,
+                      "elapsed_seconds": float
                     },
-                    'model': str,
-                    'error': str
+                    "model": str,
+                    "finish_reason": str
+                  },
+                  "tool_calls": [
+                    {"id": str, "function": {"name": str, "arguments": str}}
+                  ]
                 }
-            }
 
+        :raises Exception: Propagates any exception from the underlying API.
         """
         pass
 
@@ -289,10 +136,89 @@ class SimpleLLMClient(ABC):
         """Generate a text embedding vector for the given input string."""
         pass
 
-    @abstractmethod
-    def get_token_cost(self) -> float:
-        """Get the cost per 1K tokens for the model in AUD."""
-        pass
+    def get_token_cost(self, prompt_tokens: int, completion_tokens: int) -> Optional[float]:
+        """Calculate token cost in USD using pricing from models.json.
+
+        Returns None if pricing data is not available for this model.
+        """
+        if not hasattr(self, "service"):
+            return None
+
+        pricing = load_config().get("pricing", {}).get(self.service, {})
+        model_pricing = pricing.get(self.model)
+
+        if not model_pricing:
+            for model_key in pricing:
+                if model_key in self.model:
+                    model_pricing = pricing[model_key]
+                    break
+
+        if model_pricing:
+            return (prompt_tokens / 1_000_000) * model_pricing["prompt"] + \
+                   (completion_tokens / 1_000_000) * model_pricing["completion"]
+
+        return None
+
+    def _build_usage_metadata(
+        self, prompt_tokens: int, completion_tokens: int, elapsed_seconds: float
+    ) -> Dict[str, Any]:
+        """Build standardized usage metadata structure.
+
+        :param prompt_tokens: Number of prompt tokens used.
+        :param completion_tokens: Number of completion tokens used.
+        :param elapsed_seconds: Elapsed time for the request.
+        :return: Dict with token counts and elapsed time.
+        """
+        return {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "elapsed_seconds": elapsed_seconds,
+        }
+
+    def _build_success_response(
+        self,
+        text: str,
+        usage: Dict[str, Any],
+        finish_reason: str,
+        tool_calls: Optional[List[Dict[str, Any]]] = None,
+    ) -> Dict[str, Any]:
+        """Build standardized success response structure.
+
+        :param text: Response text content.
+        :param usage: Usage metadata from _build_usage_metadata().
+        :param finish_reason: Why generation stopped.
+        :param tool_calls: Optional list of tool calls.
+        :return: Dict with response data and metadata.
+        """
+        result = {
+            "text": text,
+            "metadata": {
+                "usage": usage,
+                "model": self.model,
+                "finish_reason": finish_reason,
+            },
+        }
+        if tool_calls:
+            result["tool_calls"] = tool_calls
+        return result
+
+    def _format_tool_call_output(
+        self, name: str, arguments: str, tool_call_id: str
+    ) -> Dict[str, Any]:
+        """Format a tool call into standardized output structure.
+
+        :param name: Function/tool name.
+        :param arguments: JSON string of arguments.
+        :param tool_call_id: Unique identifier for this tool call.
+        :return: Dict with function call details.
+        """
+        return {
+            "id": tool_call_id,
+            "function": {
+                "name": name,
+                "arguments": arguments,
+            },
+        }
 
     async def connect(self):
         """Initialize async resources. Override in subclasses as needed."""
@@ -310,55 +236,14 @@ class SimpleLLMClient(ABC):
         await self.close()
 
 
-def parse_response_as_json_list(response):
-    """Parse JSON from text response, extracting from markdown or .transactions if needed."""
-    if isinstance(response, dict):
-        response_text = response.get("text", "")
-    elif isinstance(response, str):
-        response_text = response
-    else:
-        return None
-
-    if not response_text:
-        return None
-
-    def try_parse(text):
-        try:
-            return json.loads(text)
-        except json.JSONDecodeError:
-            return None
-
-    parsed = try_parse(response_text)
-    if parsed:
-        return parsed
-
-    patterns = [
-        r"```(?:json|python)?\s*([\s\S]*?)\s*```",
-        r"```(?:json)?\s*({[\s\S]*})\s*```",
-        r"\{[\s\S]*\}",
-        r"({[\s\S]*})",
-    ]
-
-    for pattern in patterns:
-        matches = re.findall(pattern, response_text, re.IGNORECASE)
-        for match in matches:
-            parsed = try_parse(match)
-            if parsed:
-                return parsed
-
-    return None
-
-
 class OllamaClient(SimpleLLMClient):
     def __init__(self, model: str = None):
         """Initialize Ollama chat client.
 
-        Args:
-            model: Name of the Ollama model to use (default from config)
-
-        Raises:
-            RuntimeError: If Ollama is not running or the model is not available
+        :param model: Name of the Ollama model to use (default from config).
+        :raises RuntimeError: If Ollama is not running or the model is not available.
         """
+        self.service = "ollama"
         self.model = model
         self.client = None
 
@@ -394,41 +279,22 @@ class OllamaClient(SimpleLLMClient):
         transformed = []
         for msg in messages:
             if msg.get("role") == "assistant" and msg.get("tool_calls"):
-                new_msg = dict(msg)
-                new_msg["tool_calls"] = []
+                new_tool_calls = []
                 for tc in msg["tool_calls"]:
-                    new_tc = dict(tc)
-                    if "function" in new_tc:
-                        new_func = dict(new_tc["function"])
-                        args = new_func.get("arguments", {})
-
-                        # Ensure arguments is always a dict for Ollama
-                        if isinstance(args, str):
-                            if args:  # Only parse non-empty strings
-                                try:
-                                    parsed_args = json.loads(args)
-                                    new_func["arguments"] = parsed_args
-                                    logger.debug(
-                                        f"Converted string args to dict: {args[:50]}..."
-                                    )
-                                except json.JSONDecodeError as e:
-                                    logger.warning(
-                                        f"Failed to parse tool arguments: {args[:50]}... Error: {e}"
-                                    )
-                                    new_func["arguments"] = {}
-                            else:
-                                new_func["arguments"] = {}
-                        elif not isinstance(args, dict):
-                            # Handle any other type by converting to dict
-                            logger.warning(
-                                f"Unexpected arguments type {type(args)}, converting to empty dict"
-                            )
-                            new_func["arguments"] = {}
-                        # If already a dict, keep it as is
-
-                        new_tc["function"] = new_func
-                    new_msg["tool_calls"].append(new_tc)
-                transformed.append(new_msg)
+                    args = tc.get("function", {}).get("arguments", {})
+                    if isinstance(args, str):
+                        try:
+                            args = json.loads(args) if args else {}
+                        except json.JSONDecodeError as e:
+                            logger.warning(f"Failed to parse tool arguments: {args[:50]}... Error: {e}")
+                            args = {}
+                    elif not isinstance(args, dict):
+                        args = {}
+                    new_tool_calls.append({
+                        "id": tc.get("id", ""),
+                        "function": {"name": tc["function"]["name"], "arguments": args},
+                    })
+                transformed.append({**msg, "tool_calls": new_tool_calls})
             else:
                 transformed.append(msg)
         return transformed
@@ -453,25 +319,6 @@ class OllamaClient(SimpleLLMClient):
                 options["num_predict"] = max_tokens
 
             transformed_messages = self._transform_messages(messages)
-
-            # Validate that all tool_calls have dict arguments before sending to Ollama
-            for msg in transformed_messages:
-                if msg.get("role") == "assistant" and msg.get("tool_calls"):
-                    for tc in msg.get("tool_calls", []):
-                        if "function" in tc:
-                            args = tc["function"].get("arguments")
-                            if isinstance(args, str):
-                                logger.error(
-                                    f"Tool call still has string arguments after transformation: "
-                                    f"tool={tc['function'].get('name')}, args={args[:100]}"
-                                )
-                                # Force convert to dict as fallback
-                                try:
-                                    tc["function"]["arguments"] = (
-                                        json.loads(args) if args else {}
-                                    )
-                                except json.JSONDecodeError:
-                                    tc["function"]["arguments"] = {}
 
             chat_kwargs = {
                 "model": self.model,
@@ -514,89 +361,38 @@ class OllamaClient(SimpleLLMClient):
 
             completion_tokens = len(response_text.split()) if response_text else 0
             prompt_tokens = sum(len((m.get("content") or "").split()) for m in messages)
-            total_tokens = prompt_tokens + completion_tokens
 
             tool_calls = None
             if raw_tool_calls:
                 tool_calls = []
-                for idx, tool_call in enumerate(raw_tool_calls):
+                for tool_call in raw_tool_calls:
                     if isinstance(tool_call, dict) and "function" in tool_call:
                         func = tool_call["function"]
-                        function_name = func.get("name", "")
-                        function_args = func.get("arguments", {})
-                        tool_call_id = tool_call.get(
-                            "id", f"call_{uuid.uuid4().hex[:8]}"
-                        )
-
-                        if isinstance(function_args, dict):
-                            function_args = json.dumps(function_args)
-                        elif not isinstance(function_args, str):
-                            function_args = str(function_args)
-
-                        tool_calls.append(
-                            {
-                                "function": {
-                                    "name": function_name,
-                                    "arguments": function_args,
-                                    "tool_call_id": tool_call_id,
-                                }
-                            }
-                        )
+                        name = func.get("name", "")
+                        args = func.get("arguments", {})
+                        tc_id = tool_call.get("id", f"call_{uuid.uuid4().hex[:8]}")
                     elif hasattr(tool_call, "function"):
                         function = tool_call.function
-                        function_name = getattr(function, "name", "")
-                        function_args = getattr(function, "arguments", {})
-                        tool_call_id = (
-                            getattr(tool_call, "id", None)
-                            or f"call_{uuid.uuid4().hex[:8]}"
-                        )
+                        name = getattr(function, "name", "")
+                        args = getattr(function, "arguments", {})
+                        tc_id = getattr(tool_call, "id", None) or f"call_{uuid.uuid4().hex[:8]}"
+                    else:
+                        continue
 
-                        if isinstance(function_args, dict):
-                            function_args = json.dumps(function_args)
-                        elif not isinstance(function_args, str):
-                            function_args = str(function_args)
+                    if isinstance(args, dict):
+                        args = json.dumps(args)
+                    elif not isinstance(args, str):
+                        args = str(args)
 
-                        tool_calls.append(
-                            {
-                                "function": {
-                                    "name": function_name,
-                                    "arguments": function_args,
-                                    "tool_call_id": tool_call_id,
-                                }
-                            }
-                        )
+                    tool_calls.append(self._format_tool_call_output(name, args, tc_id))
 
-            result = {
-                "text": response_text,
-                "metadata": {
-                    "usage": {
-                        "prompt_tokens": prompt_tokens,
-                        "completion_tokens": completion_tokens,
-                        "total_tokens": total_tokens,
-                        "elapsed_seconds": elapsed_seconds,
-                    },
-                    "model": self.model,
-                    "finish_reason": done_reason,
-                },
-            }
-
-            if tool_calls:
-                result["tool_calls"] = tool_calls
-
-            return result
+            usage = self._build_usage_metadata(
+                prompt_tokens, completion_tokens, elapsed_seconds
+            )
+            return self._build_success_response(response_text, usage, done_reason, tool_calls)
         except Exception as e:
             logger.error(f"Error calling Ollama: {e}")
-            return {
-                "text": f"Error: {str(e)}",
-                "metadata": {
-                    "usage": {
-                        "prompt_tokens": 0,
-                        "completion_tokens": 0,
-                        "total_tokens": 0,
-                        "elapsed_seconds": time.time() - start_time,
-                    }
-                },
-            }
+            raise
 
     async def embed(self, input: str) -> List[float]:
         """Generate text embeddings using Ollama's embedding capabilities."""
@@ -609,8 +405,13 @@ class OllamaClient(SimpleLLMClient):
             logger.error(f"Error calling Ollama embed: {e}")
             raise RuntimeError(f"Error generating embedding: {str(e)}")
 
-    def get_token_cost(self) -> float:
-        """Returns 0.0 AUD since Ollama runs locally with no API costs."""
+    def get_token_cost(self, prompt_tokens: int, completion_tokens: int) -> float:
+        """Returns 0.0 since Ollama runs locally with no API costs.
+
+        :param prompt_tokens: Unused.
+        :param completion_tokens: Unused.
+        :return: Always 0.0.
+        """
         return 0.0
 
 
@@ -621,13 +422,11 @@ class OpenAIClient(SimpleLLMClient):
     ):
         """Initialize OpenAI chat client.
 
-        Args:
-            model: Name of the OpenAI model to use (default from config)
-
-        Raises:
-            ValueError: If OPENAI_API_KEY environment variable is not set
-            RuntimeError: If the API key is invalid or the model is not available
+        :param model: Name of the OpenAI model to use (default from config).
+        :raises ValueError: If ``OPENAI_API_KEY`` is not set.
+        :raises RuntimeError: If the API key is invalid or the model is not available.
         """
+        self.service = "openai"
         self.model = model
         self.client = None
         self._closed = True
@@ -668,23 +467,83 @@ class OpenAIClient(SimpleLLMClient):
             self.client = None
             self._closed = True
 
+    def _handle_incomplete_tool_sequence(
+        self, msg: Dict, i: int, messages: List[Dict]
+    ) -> Optional[Dict]:
+        """Handle assistant message with tool_calls that has no following tool message.
+
+        This occurs when loading conversation history with incomplete tool sequences.
+        OpenAI requires: assistant (with tool_calls) → tool → assistant.
+
+        :param msg: The assistant message with tool_calls.
+        :param i: Index of the message in the list.
+        :param messages: Full message list.
+        :return: Cleaned message without tool_calls if incomplete, original if complete.
+        """
+        has_following_tool = (
+            i + 1 < len(messages) and messages[i + 1].get("role") == "tool"
+        )
+        if not has_following_tool:
+            clean_msg = {k: v for k, v in msg.items() if k != "tool_calls"}
+            if not clean_msg.get("content"):
+                clean_msg["content"] = ""
+            logger.debug("Stripped tool_calls from assistant message (incomplete sequence)")
+            return clean_msg
+        return msg
+
+    def _should_skip_orphaned_tool_message(self, in_active_sequence: bool) -> bool:
+        """Check if a tool message should be skipped because it's orphaned.
+
+        :param in_active_sequence: Whether we're currently in an active tool sequence.
+        :return: True if the message should be skipped.
+        """
+        if not in_active_sequence:
+            logger.debug("Skipping orphaned tool message (no active tool sequence)")
+            return True
+        return False
+
     def _transform_messages(
         self, messages: List[Dict[str, Any]]
     ) -> List[Dict[str, Any]]:
-        """Transform intermediate message format to OpenAI API format. Ensures tool messages have correct structure."""
-        formatted_messages = []
+        """Transform intermediate message format to OpenAI API format.
 
-        for msg in messages:
+        OpenAI requires strict message sequencing for tool calls:
+        assistant (with tool_calls) → tool (with tool_call_id) → assistant.
+        Filters out incomplete tool sequences to avoid 400 validation errors.
+
+        :param messages: List of messages in intermediate format.
+        :return: List of messages formatted for the OpenAI API.
+        """
+        formatted_messages = []
+        in_active_tool_sequence = False
+
+        for i, msg in enumerate(messages):
             role = msg["role"]
 
-            if role == "tool":
-                formatted_messages.append(
-                    {
-                        "role": "tool",
-                        "content": msg.get("content", ""),
-                        "tool_call_id": msg.get("tool_call_id", ""),
-                    }
-                )
+            if role == "system":
+                in_active_tool_sequence = False
+                formatted_messages.append(msg)
+            elif role == "tool":
+                if not self._should_skip_orphaned_tool_message(in_active_tool_sequence):
+                    formatted_messages.append(
+                        {
+                            "role": "tool",
+                            "content": msg.get("content", ""),
+                            "tool_call_id": msg.get("tool_call_id", ""),
+                        }
+                    )
+            elif role == "assistant":
+                if "tool_calls" in msg:
+                    cleaned_msg = self._handle_incomplete_tool_sequence(msg, i, messages)
+                    if cleaned_msg:
+                        in_active_tool_sequence = "tool_calls" in cleaned_msg
+                        formatted_messages.append(cleaned_msg)
+                else:
+                    in_active_tool_sequence = False
+                    formatted_messages.append(msg)
+            elif role == "user":
+                in_active_tool_sequence = False
+                formatted_messages.append(msg)
             else:
                 formatted_messages.append(msg)
 
@@ -716,61 +575,32 @@ class OpenAIClient(SimpleLLMClient):
             text = completion.choices[0].message.content if completion.choices else ""
 
             if hasattr(completion, "usage") and completion.usage:
-                usage = {
-                    "prompt_tokens": completion.usage.prompt_tokens,
-                    "completion_tokens": completion.usage.completion_tokens,
-                    "total_tokens": completion.usage.total_tokens,
-                    "elapsed_seconds": elapsed_seconds,
-                }
+                usage = self._build_usage_metadata(
+                    completion.usage.prompt_tokens,
+                    completion.usage.completion_tokens,
+                    elapsed_seconds,
+                )
             else:
-                usage = {
-                    "prompt_tokens": 0,
-                    "completion_tokens": 0,
-                    "total_tokens": 0,
-                    "elapsed_seconds": elapsed_seconds,
-                }
+                usage = self._build_usage_metadata(0, 0, elapsed_seconds)
 
-            # Extract tool calls if present
             tool_calls = None
             if completion.choices and completion.choices[0].message.tool_calls:
-                tool_calls = []
-                for tool_call in completion.choices[0].message.tool_calls:
-                    tool_calls.append(
-                        {
-                            "function": {
-                                "name": tool_call.function.name,
-                                "arguments": tool_call.function.arguments,
-                                "tool_call_id": tool_call.id,
-                            }
-                        }
+                tool_calls = [
+                    self._format_tool_call_output(
+                        tc.function.name, tc.function.arguments, tc.id
                     )
+                    for tc in completion.choices[0].message.tool_calls
+                ]
 
-            return {
-                "text": text,
-                "metadata": {
-                    "usage": usage,
-                    "model": self.model,
-                    "finish_reason": completion.choices[0].finish_reason
-                    if completion.choices and completion.choices[0].finish_reason
-                    else "stop",
-                },
-                "tool_calls": tool_calls,
-            }
+            finish_reason = (
+                completion.choices[0].finish_reason
+                if completion.choices and completion.choices[0].finish_reason
+                else "stop"
+            )
+            return self._build_success_response(text, usage, finish_reason, tool_calls)
         except Exception as e:
             logger.error(f"Error calling OpenAI: {e}")
-            return {
-                "text": f"Error: {str(e)}",
-                "metadata": {
-                    "usage": {
-                        "prompt_tokens": 0,
-                        "completion_tokens": 0,
-                        "total_tokens": 0,
-                        "elapsed_seconds": time.time() - start_time,
-                    },
-                    "model": self.model,
-                    "error": str(e),
-                },
-            }
+            raise
 
     async def embed(self, input: str) -> List[float]:
         """Generate text embeddings using OpenAI's embedding model."""
@@ -785,34 +615,13 @@ class OpenAIClient(SimpleLLMClient):
             logger.error(f"Error calling OpenAI embed: {e}")
             raise RuntimeError(f"Error generating embedding: {str(e)}")
 
-    def get_token_cost(self) -> float:
-        """Returns OpenAI model pricing per 1K tokens in AUD.
-
-        USD prices converted to AUD using 1.52 exchange rate (Dec 2024).
-        Blended rates assume 50% input / 50% output token mix:
-        - gpt-4: $0.045 USD → $0.0684 AUD per 1K tokens (blended: $0.03 in + $0.06 out)
-        - gpt-4o: $0.00625 USD → $0.0095 AUD per 1K tokens (blended: $0.0025 in + $0.01 out)
-        - gpt-4o-mini: $0.000375 USD → $0.00057 AUD per 1K tokens (blended: $0.00015 in + $0.0006 out)
-        - gpt-4-turbo: $0.02 USD → $0.0304 AUD per 1K tokens (blended: $0.01 in + $0.03 out)
-        - gpt-3.5-turbo: $0.001 USD → $0.00152 AUD per 1K tokens (blended: $0.0005 in + $0.0015 out)
-        """
-        pricing = {
-            "gpt-4": 0.0684,
-            "gpt-4o": 0.0095,
-            "gpt-4o-mini": 0.00057,
-            "gpt-4-turbo": 0.0304,
-            "gpt-3.5-turbo": 0.00152,
-        }
-        model_key = self.model.lower()
-        if model_key not in pricing:
-            logger.warning(
-                f"Unknown OpenAI model '{self.model}', using default cost of 0.0 AUD"
-            )
-        return pricing.get(model_key, 0.0)
-
 
 class GroqClient(OpenAIClient):
     """Groq chat client that inherits from OpenAI client (Groq uses OpenAI-compatible API)."""
+
+    def __init__(self, model: str = None):
+        super().__init__(model=model)
+        self.service = "groq"
 
     async def connect(self):
         if self.client and not self._closed:
@@ -829,6 +638,75 @@ class GroqClient(OpenAIClient):
         self.client = groq.AsyncGroq(api_key=api_key)
         self._closed = False
 
+    async def get_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        tools: Optional[List[Dict[str, Any]]] = None,
+        max_tokens: Optional[int] = None,
+        temperature: float = 0.0,
+    ) -> Dict[str, Any]:
+        """Groq implementation with intelligent parallel_tool_calls handling.
+
+        Only certain Groq models support parallel tool calling.
+        GPT-OSS models (openai/gpt-oss-*) do NOT support parallel_tool_calls.
+        """
+        await self.connect()
+        start_time = time.time()
+
+        try:
+            formatted_messages = self._transform_messages(messages)
+            api_params = {
+                "model": self.model,
+                "messages": formatted_messages,
+                "max_tokens": max_tokens,
+                "temperature": temperature,
+            }
+
+            if tools:
+                api_params["tools"] = tools
+                supports_parallel = any([
+                    self.model.startswith("llama-3."),
+                    self.model.startswith("llama-4"),
+                    self.model.startswith("meta-llama/llama-4"),
+                    self.model.startswith("qwen/"),
+                    self.model.startswith("moonshotai/"),
+                ])
+                if supports_parallel:
+                    api_params["parallel_tool_calls"] = True
+
+            completion = await self.client.chat.completions.create(**api_params)
+            elapsed_seconds = time.time() - start_time
+
+            text = completion.choices[0].message.content if completion.choices else ""
+
+            if hasattr(completion, "usage") and completion.usage:
+                usage = self._build_usage_metadata(
+                    completion.usage.prompt_tokens,
+                    completion.usage.completion_tokens,
+                    elapsed_seconds,
+                )
+            else:
+                usage = self._build_usage_metadata(0, 0, elapsed_seconds)
+
+            tool_calls = None
+            if completion.choices and completion.choices[0].message.tool_calls:
+                tool_calls = [
+                    self._format_tool_call_output(
+                        tc.function.name, tc.function.arguments, tc.id
+                    )
+                    for tc in completion.choices[0].message.tool_calls
+                ]
+
+            finish_reason = (
+                completion.choices[0].finish_reason
+                if completion.choices and completion.choices[0].finish_reason
+                else "stop"
+            )
+            return self._build_success_response(text, usage, finish_reason, tool_calls)
+        except Exception as e:
+            logger.error(f"Error calling Groq: {e}")
+            raise
+
     async def embed(self, input: str) -> List[float]:
         """Groq does not currently support embeddings."""
         raise NotImplementedError(
@@ -836,79 +714,16 @@ class GroqClient(OpenAIClient):
             "Please use OpenAI or another provider for embedding generation."
         )
 
-    def get_token_cost(self) -> float:
-        """Returns Groq model pricing per 1K tokens in AUD.
-
-        USD prices converted to AUD using 1.52 exchange rate (Dec 2024).
-        Blended rates assume 50% input / 50% output token mix:
-        - llama-3.3-70b: $0.00069 USD → $0.001049 AUD per 1K tokens (blended: $0.00059 in + $0.00079 out)
-        - llama-3.1-70b: $0.00069 USD → $0.001049 AUD per 1K tokens (blended: $0.00059 in + $0.00079 out)
-        - llama-3.1-8b: $0.000065 USD → $0.0001 AUD per 1K tokens (blended: $0.00005 in + $0.00008 out)
-        - mixtral-8x7b: $0.00024 USD → $0.00036 AUD per 1K tokens (estimated blended)
-        - gemma2-9b: $0.0002 USD → $0.0003 AUD per 1K tokens (estimated blended)
-        """
-        pricing = {
-            "llama-3.3-70b-versatile": 0.001049,
-            "llama-3.1-70b-versatile": 0.001049,
-            "llama-3.1-8b-instant": 0.0001,
-            "llama3-70b-8192": 0.001049,
-            "llama3-8b-8192": 0.0001,
-            "mixtral-8x7b-32768": 0.00036,
-            "gemma2-9b-it": 0.0003,
-        }
-        model_key = self.model.lower()
-        if model_key not in pricing:
-            logger.warning(
-                f"Unknown Groq model '{self.model}', using default cost of 0.0 AUD"
-            )
-        return pricing.get(model_key, 0.0)
-
 
 @lru_cache(maxsize=None)
 def get_aws_config(is_raise_exception: bool = True):
-    """
-    Returns AWS configuration for boto3 client initialization.
+    """Return AWS configuration dict for boto3 client initialization.
 
-    This function searches for AWS profiles and saved credentials to build a
-    configuration dictionary that can be used to initialize boto3 clients and
-    sessions. It validates the discovered credentials to ensure they are properly
-    configured and not expired.
+    Searches for AWS profiles and credentials, validates them, and checks for
+    SSO token expiration. Uses ``AWS_PROFILE`` and ``AWS_REGION`` env vars if set.
 
-    Credential Discovery Process:
-    1. Looks for AWS_PROFILE environment variable to determine profile name
-    2. Searches for saved credentials in ~/.aws/credentials and ~/.aws/config
-    3. Validates the profile exists if AWS_PROFILE is set
-    4. Falls back to default credential chain if profile not found
-    5. Creates a boto3 session using the discovered profile (or default)
-    6. Validates credentials contain required access_key and secret_key
-    7. Tests credential validity with an STS GetCallerIdentity call
-    8. Checks for SSO token expiration on SSO profiles
-
-    Environment Variables:
-        AWS_PROFILE (str, optional): Name of the AWS profile to use from
-                                   ~/.aws/credentials. If not set, uses the
-                                   default profile.
-        AWS_REGION (str, optional): AWS region to use for AWS services
-
-    Returns:
-        dict: AWS configuration dictionary for boto3 client initialization:
-            - profile_name (str, optional): The AWS profile name to pass to
-                                          boto3.client() or boto3.Session()
-            - region_name (str): AWS region name for service clients
-
-    Note:
-        This function is cached to avoid repeated credential discovery and
-        validation. The returned configuration can be unpacked directly into
-        boto3 client constructors. All validation errors are logged but do not
-        raise exceptions - returns gracefully with empty config on failure.
-
-    Examples:
-        >>> aws_config = get_aws_config()
-        >>> s3_client = boto3.client('s3', **aws_config)
-        >>>
-        >>> # Or with session
-        >>> session = boto3.Session(**aws_config)
-        >>> dynamodb = session.client('dynamodb')
+    :param is_raise_exception: If True, raise on credential errors; otherwise log and return partial config.
+    :return: Dict with optional ``profile_name`` and ``region_name`` keys, suitable for unpacking into boto3 constructors.
     """
     aws_config = {}
     available_profiles = set()
@@ -984,29 +799,29 @@ def get_aws_config(is_raise_exception: bool = True):
         sts = session.client("sts")
         sts.get_caller_identity()
 
-        # Check for SSO expiry with helpful error message
-        if profile_name and profile_name in aws_config.get("profile_name", ""):
-            if os.path.exists(config_path):
-                config = configparser.ConfigParser()
-                config.read(config_path)
-                section = f"profile {profile_name}"
-                if config.has_section(section) and config.has_option(
-                    section, "sso_start_url"
-                ):
-                    if hasattr(credentials, "token"):
-                        creds = credentials.get_frozen_credentials()
-                        if hasattr(
-                            creds, "expiry_time"
-                        ) and creds.expiry_time < datetime.now(timezone.utc):
-                            login_cmd = f"aws sso login --profile {profile_name}"
-                            if is_raise_exception:
-                                raise ValueError(
-                                    f"AWS SSO session expired. Please run:\n  {login_cmd}"
-                                )
-                            logger.warning(
-                                f"AWS SSO session expired. Please run: {login_cmd}"
+        # Check for SSO expiry by reading cache files (more reliable than frozen credentials)
+        if profile_name:
+            sso_cache_dir = Path.home() / ".aws" / "sso" / "cache"
+            if sso_cache_dir.exists():
+                for cache_file in sso_cache_dir.glob("*.json"):
+                    try:
+                        with open(cache_file) as f:
+                            cache_data = json.load(f)
+                        if "expiresAt" in cache_data:
+                            expires_at = datetime.fromisoformat(
+                                cache_data["expiresAt"].replace("Z", "+00:00")
                             )
-                            return aws_config
+                            if expires_at < datetime.now(timezone.utc):
+                                msg = (
+                                    f"AWS SSO session expired for profile '{profile_name}'. "
+                                    f"Run: aws sso login --profile {profile_name}"
+                                )
+                                if is_raise_exception:
+                                    raise ValueError(msg)
+                                logger.warning(msg)
+                                return aws_config
+                    except (json.JSONDecodeError, KeyError):
+                        continue
 
         return aws_config
 
@@ -1048,20 +863,15 @@ class BedrockClient(SimpleLLMClient):
         self,
         model: str = None,
     ):
-        """
-        Initialize Bedrock chat client.
+        """Initialize Bedrock chat client using the Converse API.
 
-        This implementation exclusively uses the Bedrock Converse API to enable
-        tool/function calling support. As a result, only Claude models are supported
-        since they are the primary models that work well with the Converse API for
-        tool usage. Other Bedrock models may not support tools through this API.
-
-        Args:
-            model: Claude model ID for Bedrock (default from config).
+        :param model: Claude model ID for Bedrock (default from config).
         """
+        self.service = "bedrock"
         self.model = model
         self.client = None
         self._session = None
+        self._client_ctx = None
         self._closed = True
 
     async def connect(self):
@@ -1072,26 +882,33 @@ class BedrockClient(SimpleLLMClient):
         logger.info(f"Initializing 'bedrock:{self.model}'")
         aws_config = get_aws_config()
         self._session = aioboto3.Session(**aws_config)
-        self.client = await self._session.client("bedrock-runtime").__aenter__()
+        self._client_ctx = self._session.client("bedrock-runtime")
+        self.client = await self._client_ctx.__aenter__()
         self._closed = False
 
     async def close(self):
-        """Close the client and release resources."""
+        """Close the client and properly clean up aiohttp sessions."""
         if self.client is not None and not self._closed:
-            await self.client.__aexit__(None, None, None)
+            await self._client_ctx.__aexit__(None, None, None)
             self.client = None
             self._closed = True
+            await asyncio.sleep(AIOBOTO3_CLEANUP_DELAY_SECONDS)
 
     def _build_result_from_response(
         self, response: Any, start_time: float
     ) -> Dict[str, Any]:
-        """Build standardized result structure from Bedrock response."""
+        """Build standardized result structure from Bedrock Converse API response.
+
+        :param response: Bedrock Converse API response dict, or error string.
+        :param start_time: Request start time for elapsed calculation.
+        :return: Standardized response dict with text, metadata, and optional tool_calls.
+        """
         text_parts = []
         tool_calls = []
+        usage_dict = {}
 
         if isinstance(response, str):
             text_parts.append(response)
-            usage = {}
             stop_reason = "stop"
         else:
             output = response.get("output", {})
@@ -1103,36 +920,67 @@ class BedrockClient(SimpleLLMClient):
                     elif "toolUse" in content:
                         tool_use = content["toolUse"]
                         tool_calls.append(
-                            {
-                                "function": {
-                                    "name": tool_use["name"],
-                                    "arguments": json.dumps(tool_use.get("input", {})),
-                                    "tool_call_id": tool_use.get("toolUseId", ""),
-                                }
-                            }
+                            self._format_tool_call_output(
+                                tool_use["name"],
+                                json.dumps(tool_use.get("input", {})),
+                                tool_use.get("toolUseId", ""),
+                            )
                         )
-            usage = response.get("usage", {})
+            usage_dict = response.get("usage", {})
             stop_reason = response.get("stopReason", "unknown")
 
-        result = {
-            "text": "\n".join(text_parts).strip(),
-            "metadata": {
-                "usage": {
-                    "prompt_tokens": usage.get("inputTokens", 0),
-                    "completion_tokens": usage.get("outputTokens", 0),
-                    "total_tokens": usage.get("inputTokens", 0)
-                    + usage.get("outputTokens", 0),
-                    "elapsed_seconds": time.time() - start_time,
-                },
-                "model": self.model,
-                "finish_reason": stop_reason,
-            },
-        }
+        usage = self._build_usage_metadata(
+            usage_dict.get("inputTokens", 0),
+            usage_dict.get("outputTokens", 0),
+            time.time() - start_time,
+        )
+        return self._build_success_response(
+            "\n".join(text_parts).strip(),
+            usage,
+            stop_reason,
+            tool_calls if tool_calls else None,
+        )
 
-        if tool_calls:
-            result["tool_calls"] = tool_calls
+    def _batch_consecutive_tool_messages(
+        self, messages: List[Dict[str, Any]]
+    ) -> List[Dict[str, Any]]:
+        """Batch consecutive tool messages into single user messages.
 
-        return result
+        Bedrock Converse API requires all tool results following an assistant
+        message with tool calls to be in a single user message with multiple
+        toolResult blocks in the content array.
+
+        :param messages: List of messages in intermediate format.
+        :return: Messages with consecutive tool results batched together.
+        """
+        batched = []
+        i = 0
+        while i < len(messages):
+            msg = messages[i]
+            if msg.get("role") == "tool":
+                tool_batch = []
+                while i < len(messages) and messages[i].get("role") == "tool":
+                    tool_batch.append(messages[i])
+                    i += 1
+                if len(tool_batch) > 1:
+                    logger.debug(f"Batching {len(tool_batch)} tool results into single user message")
+                    combined_content = [
+                        {
+                            "toolResult": {
+                                "toolUseId": tm.get("tool_call_id", ""),
+                                "content": [{"text": str(tm.get("content", ""))}],
+                                "status": tm.get("status", "success"),
+                            }
+                        }
+                        for tm in tool_batch
+                    ]
+                    batched.append({"role": "user", "content": combined_content})
+                else:
+                    batched.append(tool_batch[0])
+            else:
+                batched.append(msg)
+                i += 1
+        return batched
 
     def _transform_messages(
         self,
@@ -1140,8 +988,16 @@ class BedrockClient(SimpleLLMClient):
         tools: Optional[List[Dict[str, Any]]] = None,
     ) -> Dict[str, Any]:
         """Transform intermediate message format to Bedrock Converse API format.
-        Returns partially filled request_kwargs with messages, system, and toolConfig.
+
+        Batches consecutive tool messages before formatting to meet Bedrock's
+        requirement that all tool results be in a single user message.
+
+        :param messages: List of messages in intermediate format.
+        :param tools: Optional list of tool definitions.
+        :return: Partially filled request_kwargs with messages, system, and toolConfig.
         """
+        messages = self._batch_consecutive_tool_messages(messages)
+
         system_parts = []
         formatted_messages = []
 
@@ -1172,6 +1028,11 @@ class BedrockClient(SimpleLLMClient):
                                     else tool_call["function"]["arguments"],
                                 }
                             }
+                        )
+                    else:
+                        logger.warning(
+                            f"Tool call missing id, skipping: "
+                            f"{tool_call.get('function', {}).get('name', 'unknown')}"
                         )
                 if assistant_content:
                     formatted_messages.append(
@@ -1255,7 +1116,6 @@ class BedrockClient(SimpleLLMClient):
 
         try:
             request_kwargs = self._transform_messages(messages, tools)
-
             request_kwargs.update(
                 {
                     "modelId": self.model,
@@ -1265,29 +1125,11 @@ class BedrockClient(SimpleLLMClient):
                     },
                 }
             )
-
-            try:
-                response = await self.client.converse(**request_kwargs)
-                return self._build_result_from_response(response, start_time)
-            except Exception as e:
-                logger.error(f"Error in Converse API call: {str(e)}")
-                raise
-
+            response = await self.client.converse(**request_kwargs)
+            return self._build_result_from_response(response, start_time)
         except Exception as e:
-            logger.error(f"Error in get_completion: {e}")
-            return {
-                "text": f"Error: {str(e)}",
-                "metadata": {
-                    "usage": {
-                        "prompt_tokens": 0,
-                        "completion_tokens": 0,
-                        "total_tokens": 0,
-                        "elapsed_seconds": time.time() - start_time,
-                    },
-                    "model": self.model,
-                    "error": str(e),
-                },
-            }
+            logger.error(f"Error in Bedrock get_completion: {e}")
+            raise
 
     async def embed(self, input: str) -> List[float]:
         """Generate text embeddings using Bedrock's embedding model."""
@@ -1309,37 +1151,3 @@ class BedrockClient(SimpleLLMClient):
             logger.error(f"Error calling Bedrock embed: {e}")
             raise RuntimeError(f"Error generating embedding: {str(e)}")
 
-    def get_token_cost(self) -> float:
-        """Returns Bedrock model pricing per 1K tokens in AUD based on model type.
-
-        USD prices converted to AUD using 1.52 exchange rate (Dec 2024).
-        Blended rates assume 50% input / 50% output token mix:
-        - Claude Opus: $0.015 USD → $0.0228 AUD per 1K tokens (estimated blended)
-        - Claude Sonnet: $0.009 USD → $0.01368 AUD per 1K tokens (blended: $0.003 in + $0.015 out)
-        - Claude Haiku: $0.00025 USD → $0.00038 AUD per 1K tokens (estimated blended)
-        - Amazon Nova Pro: $0.002 USD → $0.00304 AUD per 1K tokens (blended: $0.0008 in + $0.0032 out)
-        - Amazon Nova Lite: $0.00006 USD → $0.000091 AUD per 1K tokens (estimated blended)
-        - Amazon Nova Micro: $0.000035 USD → $0.000053 AUD per 1K tokens (estimated blended)
-        """
-        model_lower = self.model.lower()
-
-        if "opus" in model_lower:
-            return 0.0228
-        elif "sonnet" in model_lower:
-            return 0.01368
-        elif "haiku" in model_lower:
-            return 0.00038
-        elif "nova-pro" in model_lower or "novapro" in model_lower:
-            return 0.00304
-        elif "nova-lite" in model_lower or "novalite" in model_lower:
-            return 0.000091
-        elif "nova-micro" in model_lower or "novamicro" in model_lower:
-            return 0.000053
-        elif "nova" in model_lower:
-            logger.info(f"Using Nova Pro pricing for model '{self.model}'")
-            return 0.00304
-        else:
-            logger.warning(
-                f"Unknown Bedrock model '{self.model}', using default cost of 0.0 AUD"
-            )
-            return 0.0
