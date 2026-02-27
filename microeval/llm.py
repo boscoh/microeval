@@ -713,40 +713,31 @@ def get_aws_config(is_raise_exception: bool = True):
     :param is_raise_exception: If True, raise on credential errors; otherwise log and return partial config.
     :return: Dict with optional ``profile_name`` and ``region_name`` keys, suitable for unpacking into boto3 constructors.
     """
+    home = Path.home()
     aws_config = {}
 
     # Discover available profiles from credentials and config files
-    home = Path.home()
     available_profiles = set()
-    for file_path in [home / ".aws" / "credentials", home / ".aws" / "config"]:
-        if file_path.exists():
+    for aws_file in [home / ".aws" / "credentials", home / ".aws" / "config"]:
+        if aws_file.exists():
             cfg = configparser.ConfigParser()
-            cfg.read(file_path)
+            cfg.read(aws_file)
             for section in cfg.sections():
-                if section.startswith("profile "):
-                    available_profiles.add(section.replace("profile ", "", 1))
-                else:
-                    available_profiles.add(section)
+                name = section[8:] if section.startswith("profile ") else section
+                available_profiles.add(name)
 
-    # Validate AWS_PROFILE exists if specified
+    # Use AWS_PROFILE if it exists, otherwise fall back to default credential chain
     profile_name = os.getenv("AWS_PROFILE")
-    profile_not_found = False
     if profile_name:
         if profile_name in available_profiles:
             aws_config["profile_name"] = profile_name
         else:
-            logger.info(
-                f"AWS profile '{profile_name}' not found, using default credential chain"
-            )
-            profile_not_found = True
+            logger.info(f"AWS profile '{profile_name}' not found, using default credential chain")
+            os.environ.pop("AWS_PROFILE", None)
 
     region = os.getenv("AWS_REGION")
     if region:
         aws_config["region_name"] = region
-
-    # Remove AWS_PROFILE from env if profile not found to allow fallback
-    if profile_not_found:
-        os.environ.pop("AWS_PROFILE", None)
 
     try:
         session = boto3.Session(**aws_config)
@@ -754,82 +745,67 @@ def get_aws_config(is_raise_exception: bool = True):
 
         if not credentials:
             if is_raise_exception:
-                if available_profiles:
-                    raise ValueError(
-                        f"No AWS credentials found.\n"
-                        f"Available profiles: {', '.join(available_profiles)}\n"
-                        f"To configure: aws configure\n"
-                        f"Or set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY environment variables"
-                    )
-                else:
-                    raise ValueError(
-                        "No AWS credentials found.\n"
-                        "To configure: aws configure\n"
-                        "Or set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY environment variables"
-                    )
+                hint = f"Available profiles: {', '.join(available_profiles)}\n" if available_profiles else ""
+                raise ValueError(
+                    f"No AWS credentials found.\n{hint}"
+                    "To configure: aws configure\n"
+                    "Or set AWS_ACCESS_KEY_ID/AWS_SECRET_ACCESS_KEY environment variables"
+                )
             return aws_config
 
         if not credentials.access_key or not credentials.secret_key:
             if is_raise_exception:
-                raise ValueError(
-                    "Incomplete AWS credentials (missing access key or secret key)"
-                )
+                raise ValueError("Incomplete AWS credentials (missing access key or secret key)")
             logger.warning("Incomplete AWS credentials")
             return aws_config
 
-        # Validate credentials work
-        sts = session.client("sts")
-        sts.get_caller_identity()
+        session.client("sts").get_caller_identity()
 
-        # Check for SSO expiry by reading cache files (more reliable than frozen credentials)
+        # Check SSO cache for expiry (more reliable than relying on frozen credentials).
+        # Detect expiry outside the parse try/except so the raise isn't silently swallowed.
         if profile_name:
+            sso_expired_msg = None
             sso_cache_dir = home / ".aws" / "sso" / "cache"
             if sso_cache_dir.exists():
                 for cache_file in sso_cache_dir.glob("*.json"):
                     try:
-                        with open(cache_file) as f:
-                            cache_data = json.load(f)
+                        cache_data = json.loads(cache_file.read_text())
                         if "expiresAt" in cache_data:
-                            expires_at = datetime.fromisoformat(
-                                cache_data["expiresAt"].replace("Z", "+00:00")
-                            )
+                            expires_at = datetime.fromisoformat(cache_data["expiresAt"].replace("Z", "+00:00"))
                             if expires_at < datetime.now(timezone.utc):
-                                msg = (
+                                sso_expired_msg = (
                                     f"AWS SSO session expired for profile '{profile_name}'. "
                                     f"Run: aws sso login --profile {profile_name}"
                                 )
-                                if is_raise_exception:
-                                    raise ValueError(msg)
-                                logger.warning(msg)
-                                return aws_config
+                                break
                     except (json.JSONDecodeError, ValueError, KeyError):
                         continue
+            if sso_expired_msg:
+                if is_raise_exception:
+                    raise ValueError(sso_expired_msg)
+                logger.warning(sso_expired_msg)
+                return aws_config
 
         return aws_config
 
     except ClientError as e:
         if is_raise_exception:
             raise
+        profile_to_check = aws_config.get("profile_name", profile_name)
         error_code = e.response["Error"]["Code"]
         if error_code == "ExpiredToken":
-            profile_to_check = aws_config.get("profile_name", profile_name)
             if profile_to_check:
-                logger.warning(
-                    f"AWS SSO session expired for profile '{profile_to_check}'. "
-                    f"Run: aws sso login --profile {profile_to_check}"
-                )
+                logger.warning(f"AWS SSO session expired for profile '{profile_to_check}'. Run: aws sso login --profile {profile_to_check}")
             else:
                 logger.warning("AWS credentials have expired")
         elif error_code == "InvalidClientTokenId":
-            logger.warning(
-                "AWS credentials are invalid. Please reconfigure: aws configure"
-            )
+            logger.warning("AWS credentials are invalid. Please reconfigure: aws configure")
         else:
             logger.warning(f"AWS API error: {error_code}")
     except Exception as e:
         if is_raise_exception:
             raise
-        profile_to_check = aws_config.get("profile_name", profile_name)
+        profile_to_check = aws_config.get("profile_name", profile_name) or "default"
         err = str(e).lower()
         if "could not be found" in err or "profile" in err:
             logger.error(f"AWS profile '{profile_to_check}' not found. Check ~/.aws/credentials or ~/.aws/config")
