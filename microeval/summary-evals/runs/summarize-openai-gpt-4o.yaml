@@ -1,15 +1,15 @@
 ---
 file_path: null
-query_ref: summarize
-prompt_ref: summarize
+query_ref: financial_crisis_2008
+prompt_ref: bullet_points
 service: openai
 model: gpt-4o
 repeat: 3
 temperature: 0.5
 evaluators:
 - word_count
-- coherence
 - equivalence
+- relevance
 
 
 

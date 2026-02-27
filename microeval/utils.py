@@ -15,11 +15,11 @@ _MAX_LEN_LINE = 80
 
 def _folded_str_yaml_representer(dumper, data):
     if isinstance(data, str):
-        if "\n" in data or len(data) > 60:
+        if "\n" in data:
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="|")
+        if len(data) > 60:
             return dumper.represent_scalar("tag:yaml.org,2002:str", data, style=">")
-    return dumper.represent_scalar(
-        "tag:yaml.org,2002:str", data, style="" if "\n" not in data else "|"
-    )
+    return dumper.represent_scalar("tag:yaml.org,2002:str", data, style="")
 
 
 yaml.add_representer(str, _folded_str_yaml_representer)

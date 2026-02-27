@@ -1,12 +1,12 @@
 ---
 file_path: null
-query_ref: summarize
-prompt_ref: summarize
+query_ref: financial_crisis_2008
+prompt_ref: bullet_points
 service: bedrock
 model: amazon.nova-pro-v1:0
 repeat: 3
 temperature: 0.5
 evaluators:
 - word_count
-- coherence
 - equivalence
+- relevance

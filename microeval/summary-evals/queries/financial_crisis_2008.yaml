@@ -1,0 +1,29 @@
+---
+input: >-
+  The 2008 financial crisis began with the collapse of the U.S. housing market.
+  Banks had issued millions of subprime mortgages to borrowers with poor credit
+  histories, then bundled these loans into complex securities called collateralized
+  debt obligations (CDOs). Credit rating agencies, relying on flawed models, gave
+  these instruments top AAA ratings. Institutional investors worldwide — pension
+  funds, hedge funds, foreign banks — purchased them believing they were safe.
+  When U.S. home prices peaked in 2006 and began declining, mortgage defaults
+  surged. By 2007, Bear Stearns had shut down two hedge funds heavily exposed to
+  mortgage-backed securities. In September 2008, Lehman Brothers filed for
+  bankruptcy — the largest in U.S. history — triggering panic across global credit
+  markets. Simultaneously, the insurance giant AIG faced collapse after writing
+  hundreds of billions in credit default swaps it could not honor. The U.S.
+  government intervened with the Troubled Asset Relief Program (TARP), authorizing
+  $700 billion to stabilize financial institutions. The Federal Reserve slashed
+  interest rates to near zero and launched quantitative easing, purchasing
+  mortgage-backed securities and Treasury bonds to inject liquidity. Despite these
+  measures, the crisis spread to the real economy: GDP contracted by 4.3 percent,
+  unemployment doubled to 10 percent, and roughly 3.8 million homes were
+  foreclosed. The crisis exposed deep failures in financial regulation, risk
+  modeling, and corporate governance. The Dodd-Frank Act of 2010 imposed new
+  capital requirements on banks, created the Consumer Financial Protection Bureau,
+  and established mechanisms for winding down failing institutions, fundamentally
+  reshaping financial oversight for the following decade.
+output: |
+  • Subprime mortgage securitization with flawed AAA ratings created systemic fragility across global credit markets.
+  • Lehman Brothers' 2008 collapse triggered cascading failures, prompting $700 billion in government bailouts and near-zero interest rates.
+  • The resulting 4.3% GDP contraction and 10% unemployment led to the Dodd-Frank Act, overhauling financial regulation for a decade.
