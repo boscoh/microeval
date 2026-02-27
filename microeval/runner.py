@@ -81,7 +81,7 @@ class Runner:
                 logger.debug(f"ElapsedSeconds: {elapsed_seconds}")
 
                 usage = response["metadata"]["usage"]
-                token_count = usage.get("total_tokens", 0)
+                token_count = usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
                 cost_value = self._llm.get_token_cost(
                     usage.get("prompt_tokens", 0),
                     usage.get("completion_tokens", 0),
