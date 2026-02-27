@@ -1,6 +1,6 @@
 ---
 file_path: null
-query_ref: engineer
+query_ref: registered-nurse
 prompt_ref: candidate-skills
 service: ollama
 model: llama3.2
@@ -8,3 +8,6 @@ repeat: 3
 temperature: 0.0
 evaluators:
 - equivalence
+- relevance
+eval_service: openai
+eval_model: gpt-4o

@@ -1,0 +1,49 @@
+---
+input: |
+  # SENIOR SOFTWARE ENGINEER
+
+  Backend engineer with 5 years of experience building distributed systems and
+  REST APIs for SaaS products. Proficient in Python and TypeScript, with strong
+  experience in cloud infrastructure and containerized deployments.
+
+  ## Work Experience
+
+  ### Senior Software Engineer, Stripe (2022–Present)
+  - Designed and maintained Python microservices processing 50,000+ daily transactions
+  - Built REST and GraphQL APIs consumed by internal and external clients
+  - Migrated services to containerized architecture using Docker and Kubernetes
+  - Led migration to AWS (ECS, RDS, S3, Lambda), reducing infrastructure costs by 30%
+  - Established CI/CD pipelines using GitHub Actions, cutting deployment time by 60%
+  - Mentored junior engineers; participated in Agile sprint planning and retrospectives
+
+  ### Software Engineer, Faire (2020–2022)
+  - Developed React and TypeScript frontend components for a marketplace platform
+  - Built and optimized PostgreSQL schemas and queries for product catalog search
+  - Implemented Redis caching layer, reducing p99 API latency from 400ms to 80ms
+  - Contributed to code reviews and pair programming sessions
+
+  ## Education
+  Bachelor of Science: Computer Science, 2019 — University of California, San Diego
+
+  ## Skills
+  Python, TypeScript, JavaScript, React, FastAPI, PostgreSQL, Redis, Docker,
+  Kubernetes, AWS, Git, REST APIs, GraphQL, CI/CD, Agile, Scrum
+output: |
+  [
+    "Python",
+    "TypeScript",
+    "JavaScript",
+    "React",
+    "FastAPI",
+    "REST APIs",
+    "GraphQL",
+    "PostgreSQL",
+    "Redis",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "Git",
+    "CI/CD",
+    "Agile",
+    "Scrum"
+  ]
