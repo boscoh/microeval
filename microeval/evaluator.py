@@ -86,7 +86,7 @@ class LLMEvaluator(BaseEvaluator):
             {"role": "user", "content": prompt},
         ]
 
-        response = await self.llm.get_completion(messages)
+        response = await self.llm.completion(messages)
 
         if "error" in response.get("metadata", {}):
             error_msg = response["metadata"]["error"]

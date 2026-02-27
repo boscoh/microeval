@@ -67,7 +67,7 @@ class Runner:
                     f">>> Evaluate iteration {i + 1}/{self._config.repeat} {run_id}"
                 )
 
-                response = await self._llm.get_completion(
+                response = await self._llm.completion(
                     messages=[
                         {"role": "system", "content": self._config.prompt},
                         {"role": "user", "content": self._config.input},

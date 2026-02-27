@@ -31,7 +31,7 @@ async def amain(service: LLMService):
                 print("Goodbye!")
                 break
             messages.append({"role": "user", "content": user_input})
-            result = await client.get_completion(messages)
+            result = await client.completion(messages)
             response_text = result.get("text", "")
             print(f"\nResponse: {response_text}")
             messages.append({"role": "assistant", "content": response_text})

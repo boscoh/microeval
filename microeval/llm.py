@@ -72,7 +72,7 @@ class SimpleLLMClient(ABC):
     """
 
     @abstractmethod
-    async def get_completion(
+    async def completion(
         self,
         messages: List[Dict[str, Any]],
         tools: Optional[List[Dict[str, Any]]] = None,
@@ -120,7 +120,7 @@ class SimpleLLMClient(ABC):
         pass
 
     @abstractmethod
-    async def embed(self, input: str) -> List[float]:
+    async def embedding(self, input: str) -> List[float]:
         """Generate a text embedding vector for the given input string."""
         pass
 
@@ -287,14 +287,14 @@ class OllamaClient(SimpleLLMClient):
                 transformed.append(msg)
         return transformed
 
-    async def get_completion(
+    async def completion(
         self,
         messages: List[Dict[str, Any]],
         tools: Optional[List[Dict[str, Any]]] = None,
         max_tokens: Optional[int] = None,
         temperature: float = 0.0,
     ) -> Dict[str, Any]:
-        """Ollama implementation of get_completion with tool support."""
+        """Ollama implementation of completion with tool support."""
         await self.connect()
 
         start_time = time.time()
@@ -382,7 +382,7 @@ class OllamaClient(SimpleLLMClient):
             logger.error(f"Error calling Ollama: {e}")
             raise
 
-    async def embed(self, input: str) -> List[float]:
+    async def embedding(self, input: str) -> List[float]:
         """Generate text embeddings using Ollama's embedding capabilities."""
         await self.connect()
 
@@ -537,14 +537,14 @@ class OpenAIClient(SimpleLLMClient):
 
         return formatted_messages
 
-    async def get_completion(
+    async def completion(
         self,
         messages: List[Dict[str, Any]],
         tools: Optional[List[Dict[str, Any]]] = None,
         max_tokens: Optional[int] = None,
         temperature: float = 0.0,
     ) -> Dict[str, Any]:
-        """OpenAI implementation of get_completion with full tool support."""
+        """OpenAI implementation of completion with full tool support."""
         await self.connect()
 
         start_time = time.time()
@@ -590,7 +590,7 @@ class OpenAIClient(SimpleLLMClient):
             logger.error(f"Error calling OpenAI: {e}")
             raise
 
-    async def embed(self, input: str) -> List[float]:
+    async def embedding(self, input: str) -> List[float]:
         """Generate text embeddings using OpenAI's embedding model."""
         await self.connect()
 
@@ -626,7 +626,7 @@ class GroqClient(OpenAIClient):
         self.client = groq.AsyncGroq(api_key=api_key)
         self._closed = False
 
-    async def get_completion(
+    async def completion(
         self,
         messages: List[Dict[str, Any]],
         tools: Optional[List[Dict[str, Any]]] = None,
@@ -695,7 +695,7 @@ class GroqClient(OpenAIClient):
             logger.error(f"Error calling Groq: {e}")
             raise
 
-    async def embed(self, input: str) -> List[float]:
+    async def embedding(self, input: str) -> List[float]:
         """Groq does not currently support embeddings."""
         raise NotImplementedError(
             "Groq does not currently support text embeddings. "
@@ -1091,7 +1091,7 @@ class BedrockClient(SimpleLLMClient):
 
         return request_kwargs
 
-    async def get_completion(
+    async def completion(
         self,
         messages: List[Dict[str, Any]],
         tools: Optional[List[Dict[str, Any]]] = None,
@@ -1116,10 +1116,10 @@ class BedrockClient(SimpleLLMClient):
             response = await self.client.converse(**request_kwargs)
             return self._build_result_from_response(response, start_time)
         except Exception as e:
-            logger.error(f"Error in Bedrock get_completion: {e}")
+            logger.error(f"Error in Bedrock completion: {e}")
             raise
 
-    async def embed(self, input: str) -> List[float]:
+    async def embedding(self, input: str) -> List[float]:
         """Generate text embeddings using Bedrock's embedding model."""
         try:
             await self.connect()
