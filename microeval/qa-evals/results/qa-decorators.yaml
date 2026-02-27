@@ -1,0 +1,50 @@
+---
+texts:
+- >-
+  A Python decorator is a special type of function that can modify or extend the behavior
+  of another function without permanently changing it. It allows you to wrap a function
+  with additional functionality without altering the original function's code.
+- >-
+  A Python decorator is a special type of function that can modify or extend the behavior
+  of another function without permanently changing it. It allows you to wrap a function
+  with additional functionality without altering the original function's code.
+- >-
+  A Python decorator is a special type of function that can modify or extend the behavior
+  of another function without permanently changing it. It allows you to wrap a function
+  with additional functionality without altering the original function's code.
+evaluations:
+- name: coherence
+  values:
+  - 0.9
+  - 0.9
+  - 0.9
+  average: 0.9
+  standard_deviation: 0.0
+- name: equivalence
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 0.32274675369262695
+  - 0.16021513938903809
+  - 0.13345694541931152
+  average: 0.2054729461669922
+  standard_deviation: 0.10243954160772148
+- name: token_count
+  values:
+  - 151
+  - 151
+  - 151
+  average: 151
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 0.000158399
+  - 0.000158399
+  - 0.000158399
+  average: 0.000158399
+  standard_deviation: 0.0

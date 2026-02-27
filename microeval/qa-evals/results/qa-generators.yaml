@@ -1,0 +1,56 @@
+---
+texts:
+- >-
+  A Python generator is a special type of function that can be used to generate a
+  sequence of results instead of computing them all at once and returning them in
+  a list, for example. It uses the yield keyword to produce a series of values over
+  time, rather than computing them all at once and returning them in a list, which
+  can be more memory-efficient.
+- >-
+  A Python generator is a special type of function that can be used to generate a
+  sequence of results instead of computing them all at once and returning them in
+  a list, for example. It uses the yield keyword to produce a value, and when called,
+  it returns an iterator that can be used to retrieve the generated values one at
+  a time.
+- >-
+  A Python generator is a special type of function that can be used to generate a
+  sequence of results instead of computing them all at once and returning them in
+  a list, for example. It uses the yield keyword to produce a value, and when called,
+  it returns an iterator that can be used to retrieve the generated values one at
+  a time.
+evaluations:
+- name: coherence
+  values:
+  - 0.9
+  - 1.0
+  - 1.0
+  average: 0.9666666666666667
+  standard_deviation: 0.05773502691896256
+- name: equivalence
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 0.282092809677124
+  - 0.22446608543395996
+  - 0.24175286293029785
+  average: 0.2494372526804606
+  standard_deviation: 0.02957189918019678
+- name: token_count
+  values:
+  - 180
+  - 177
+  - 177
+  average: 178
+  standard_deviation: 1.7320508075688772
+- name: cost
+  values:
+  - 0.00018882000000000003
+  - 0.000185673
+  - 0.000185673
+  average: 0.000186722
+  standard_deviation: 1.8169212971397693e-06

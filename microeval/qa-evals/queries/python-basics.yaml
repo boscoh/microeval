@@ -1,4 +1,9 @@
 ---
-input: What is a Python list comprehension?
+input: What is the difference between `is` and `==` in Python?
 output: >-
-  A Python list comprehension is a concise way to create lists by applying an expression to each item in an iterable, optionally with a condition. For example: [x*2 for x in range(5) if x > 0] creates [2, 4, 6, 8].
+  `==` checks value equality — whether two objects have the same content.
+  `is` checks object identity — whether two variables point to the exact
+  same object in memory. Two separate lists with equal contents are `==`
+  but not `is`. CPython caches small integers (-5 to 256) and interned
+  strings, so `is` may return True for these unexpectedly — always use
+  `==` for value comparisons.
