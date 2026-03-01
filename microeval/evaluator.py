@@ -6,8 +6,6 @@ import textwrap
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, Dict, List, Optional, Type
 
-from pydantic import BaseModel
-
 import pydash
 
 from microeval.utils import parse_json, snap_score
@@ -32,15 +30,6 @@ def register_evaluator(name: str):
 
 def get_available_evaluators() -> list[str]:
     return list(EVALUATOR_REGISTRY.keys())
-
-
-class EvalResult(BaseModel):
-    score: float = 0.5
-    reasoning: str = ""
-    elapsed_ms: int = 0
-    token_count: int = 0
-
-
 
 
 class BaseEvaluator(ABC):
@@ -179,18 +168,24 @@ class LLMEvaluator(BaseEvaluator):
                 args = arguments
             else:
                 args = {}
-            
+
             score_value = pydash.get(args, "score", 0.5)
             if isinstance(score_value, dict):
-                score_value = pydash.get(score_value, "value", pydash.get(score_value, "score", 0.5))
+                score_value = pydash.get(
+                    score_value, "value", pydash.get(score_value, "score", 0.5)
+                )
             if not isinstance(score_value, (int, float)):
                 try:
                     score_value = float(score_value)
                 except (ValueError, TypeError):
-                    logger.warning(f"Invalid score value: {score_value}, using default 0.5")
+                    logger.warning(
+                        f"Invalid score value: {score_value}, using default 0.5"
+                    )
                     score_value = 0.5
             score = snap_score(float(score_value), self.valid_scores)
-            reasoning = pydash.get(args, "reasoning", "") or pydash.get(response, "text", "")
+            reasoning = pydash.get(args, "reasoning", "") or pydash.get(
+                response, "text", ""
+            )
         else:
             text = response.get("text", "")
             data = parse_json(text)
@@ -199,7 +194,9 @@ class LLMEvaluator(BaseEvaluator):
                 reasoning = data.get("reasoning", "") or text
             else:
                 numbers = re.findall(r"\b0?\.\d+\b|\b1(?:\.0+)?\b|\b0\b", text)
-                score = snap_score(float(numbers[0]), self.valid_scores) if numbers else 0.5
+                score = (
+                    snap_score(float(numbers[0]), self.valid_scores) if numbers else 0.5
+                )
                 reasoning = text
 
         return {
@@ -208,7 +205,6 @@ class LLMEvaluator(BaseEvaluator):
             "elapsed_ms": response.get("elapsed_ms", 0),
             "token_count": response.get("token_count", 0),
         }
-
 
 
 @register_evaluator("equivalence")
@@ -291,14 +287,14 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
     """Calculate cosine similarity between two vectors."""
     if len(vec1) != len(vec2):
         raise ValueError("Vectors must have the same length")
-    
+
     dot_product = sum(a * b for a, b in zip(vec1, vec2))
     magnitude1 = math.sqrt(sum(a * a for a in vec1))
     magnitude2 = math.sqrt(sum(a * a for a in vec2))
-    
+
     if magnitude1 == 0 or magnitude2 == 0:
         return 0.0
-    
+
     return dot_product / (magnitude1 * magnitude2)
 
 
@@ -327,7 +323,8 @@ class RelevanceEmbeddingEvaluator(BaseEvaluator):
         try:
             if not hasattr(embed_client, "get_embedding"):
                 return self._empty_result(
-                    score=0.5, reasoning="Embedding client does not support get_embedding"
+                    score=0.5,
+                    reasoning="Embedding client does not support get_embedding",
                 )
         except Exception:
             return self._empty_result(
@@ -336,19 +333,20 @@ class RelevanceEmbeddingEvaluator(BaseEvaluator):
 
         try:
             import time
+
             start_time = time.time()
 
             question_embedding = await embed_client.get_embedding(question)
             response_embedding = await embed_client.get_embedding(response_text)
 
             similarity = cosine_similarity(question_embedding, response_embedding)
-            
+
             elapsed_ms = int((time.time() - start_time) * 1000)
-            
+
             score = max(0.0, min(1.0, similarity))
-            
+
             reasoning = f"Cosine similarity: {similarity:.4f} (score: {score:.4f})"
-            
+
             return {
                 "score": score,
                 "reasoning": reasoning,
@@ -447,7 +445,11 @@ class EvaluationRunner:
 
             if name in EVALUATOR_REGISTRY:
                 evaluator_cls = EVALUATOR_REGISTRY[name]
-                evaluator_llm = embed_client if name == "relevance_embedding" and embed_client else llm
+                evaluator_llm = (
+                    embed_client
+                    if name == "relevance_embedding" and embed_client
+                    else llm
+                )
                 self._evaluators[name] = evaluator_cls(
                     run_config=run_config, llm=evaluator_llm, params=params
                 )

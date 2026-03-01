@@ -12,23 +12,7 @@ from microeval.utils import load_yaml, save_yaml
 logger = logging.getLogger(__name__)
 
 
-class EvaluatorConfig(BaseModel):
-    """Configuration for an evaluator with optional parameters.
-
-    Example::
-
-        {
-          "name": "word_count",
-          "params": {
-            "min_words": 50,
-            "max_words": 200
-          }
-        }
-    """
-    name: str
-    params: Dict[str, Any] = Field(default_factory=dict)
-
-
+# Directory and File Management
 TableType = Literal["result", "run", "prompt", "query"]
 
 ext_from_table = {
@@ -87,7 +71,43 @@ class EvalsDir:
 evals_dir = EvalsDir()
 
 
+# Evaluator Domain
+class EvaluatorConfig(BaseModel):
+    """Configuration for an evaluator with optional parameters.
+
+    Example::
+
+        {
+          "name": "word_count",
+          "params": {
+            "min_words": 50,
+            "max_words": 200
+          }
+        }
+    """
+
+    name: str
+    params: Dict[str, Any] = Field(default_factory=dict)
+
+
+class EvalResult(BaseModel):
+    score: float = 0.5
+    reasoning: str = ""
+    elapsed_ms: int = 0
+    token_count: int = 0
+
+
+# Run Domain
 class RunConfig(BaseModel):
+    """Configuration for a single evaluation run.
+
+    Supports eval.yaml global config with field names:
+    - eval_llm_service / eval_llm_model (for LLM-based evaluators)
+    - eval_embed_llm_service / eval_embed_llm_model (for embedding-based evaluators)
+
+    These map to internal fields: eval_chat_service, eval_model, eval_embed_service, embed_model
+    """
+
     file_path: Optional[str] = None
     query_ref: Optional[str] = None
     prompt_ref: Optional[str] = None
@@ -108,8 +128,20 @@ class RunConfig(BaseModel):
 
     @staticmethod
     def read_from_yaml(file_path: str) -> "RunConfig":
+        """Load RunConfig from YAML file with support for eval.yaml global config.
+
+        The eval.yaml file uses the following format:
+
+        .. code-block:: yaml
+
+            # Global configuration for all runs
+            eval_llm_service: openai
+            eval_llm_model: gpt-4o-mini
+            eval_embed_llm_service: openai
+            eval_embed_llm_model: text-embedding-3-small
+        """
         data = load_yaml(file_path)
-        
+
         global_config = {}
         global_config_path = evals_dir._base / "eval.yaml"
         if global_config_path.exists():
@@ -117,31 +149,49 @@ class RunConfig(BaseModel):
                 global_config = load_yaml(str(global_config_path))
                 logger.info(f"Loaded global config from '{global_config_path}'")
             except Exception as e:
-                logger.warning(f"Failed to load global config from '{global_config_path}': {e}")
-        
+                logger.warning(
+                    f"Failed to load global config from '{global_config_path}': {e}"
+                )
+
+        # Map eval.yaml format to internal field names
+        field_mapping = {
+            "eval_llm_service": "eval_chat_service",
+            "eval_llm_model": "eval_model",
+            "eval_embed_llm_service": "eval_embed_service",
+            "eval_embed_llm_model": "embed_model",
+        }
+
+        # Apply field mapping to both data and global_config
+        for config_dict in [data, global_config]:
+            items_to_move = [
+                (new_key, internal_key)
+                for new_key, internal_key in field_mapping.items()
+                if new_key in config_dict
+            ]
+            for new_key, internal_key in items_to_move:
+                config_dict[internal_key] = config_dict[new_key]
+                del config_dict[new_key]
+
         env_key_mapping = {
             "eval_chat_service": "EVAL_CHAT_SERVICE",
             "eval_model": "EVAL_MODEL",
             "eval_embed_service": "EVAL_EMBED_SERVICE",
             "embed_model": "EVAL_EMBED_MODEL",
         }
-        for key in ["eval_chat_service", "eval_model", "eval_embed_service", "embed_model"]:
+        for key in [
+            "eval_chat_service",
+            "eval_model",
+            "eval_embed_service",
+            "embed_model",
+        ]:
             env_key = env_key_mapping[key]
             if env_key in os.environ:
                 data[key] = os.environ[env_key]
             elif (key not in data or data.get(key) is None) and key in global_config:
                 data[key] = global_config[key]
-        
+
         if "service" in data and "chat_service" not in data:
             data["chat_service"] = data.pop("service")
-        if "eval_service" in data and "eval_chat_service" not in data:
-            data["eval_chat_service"] = data.pop("eval_service")
-        if "evalService" in data and "eval_chat_service" not in data:
-            data["eval_chat_service"] = data.pop("evalService")
-        if "embed_service" in data and "eval_embed_service" not in data:
-            data["eval_embed_service"] = data.pop("embed_service")
-        if "evalModel" in data and "eval_model" not in data:
-            data["eval_model"] = data.pop("evalModel")
         result = RunConfig(**data)
         result.file_path = file_path
         logger.info(f"Loaded run config from '{file_path}'")
@@ -176,14 +226,21 @@ class RunConfig(BaseModel):
         del save_config["prompt"]
         if "service" in save_config:
             save_config["chat_service"] = save_config.pop("service")
-        if "eval_service" in save_config:
-            save_config["eval_chat_service"] = save_config.pop("eval_service")
-        if "embed_service" in save_config:
-            save_config["eval_embed_service"] = save_config.pop("embed_service")
-        
+
+        # Convert internal field names to eval.yaml format
+        field_mapping = {
+            "eval_chat_service": "eval_llm_service",
+            "eval_model": "eval_llm_model",
+            "eval_embed_service": "eval_embed_llm_service",
+            "embed_model": "eval_embed_llm_model",
+        }
+        for internal_key, yaml_key in field_mapping.items():
+            if internal_key in save_config and save_config[internal_key] is not None:
+                save_config[yaml_key] = save_config.pop(internal_key)
+
         # Remove None values so defaults can be resolved when reading back
         save_config = {k: v for k, v in save_config.items() if v is not None}
-        
+
         save_yaml(save_config, file_path)
         logger.info(f"Saved test config to '{file_path}'")
 
