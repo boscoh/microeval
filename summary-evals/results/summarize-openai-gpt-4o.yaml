@@ -1,17 +1,18 @@
 ---
 texts:
+- "- The 2008 financial crisis originated from the collapse of the U.S. housing market\
+  \ and subprime mortgage lending.  \n- Major financial institutions like Bear Stearns\
+  \ and Lehman Brothers collapsed, causing global market panic and economic downturn.\
+  \  \n- Government interventions included TARP, interest rate cuts, and new regulations\
+  \ like the Dodd-Frank Act to prevent future crises.  "
 - |-
-  - The 2008 financial crisis began with the U.S. housing market collapse due to risky subprime mortgages.
-  - Lehman Brothers' bankruptcy and AIG's near-collapse triggered panic in global credit markets in 2008.
-  - The U.S. government responded with TARP, slashed interest rates, and enacted the Dodd-Frank Act for reform.
+  - The 2008 financial crisis originated from the collapse of the U.S. housing market and risky subprime mortgages.
+  - Lehman Brothers' bankruptcy and AIG's collapse intensified global panic, prompting government intervention with TARP.
+  - The crisis led to severe economic impacts and regulatory reforms like the Dodd-Frank Act to prevent future crises.
 - |-
-  - The 2008 financial crisis began with the collapse of the U.S. housing market and risky subprime mortgages.
-  - Lehman Brothers' bankruptcy in 2008 triggered global panic, while AIG faced collapse from unmanageable credit default swaps.
-  - Government interventions like TARP and Dodd-Frank Act aimed to stabilize the economy and reform financial regulations.
-- |-
-  - The 2008 financial crisis originated from the U.S. housing market collapse due to risky subprime mortgages.
-  - Lehman Brothers' bankruptcy and AIG's near-collapse triggered global panic and required massive government intervention.
-  - The crisis led to GDP contraction, high unemployment, and regulatory reforms like the Dodd-Frank Act to prevent recurrence.
+  - The 2008 financial crisis originated from subprime mortgages bundled into CDOs, misleadingly rated AAA by credit agencies.
+  - Global panic ensued as mortgage defaults surged, leading to Lehman Brothers' bankruptcy and AIG's near-collapse.
+  - The U.S. government responded with TARP and monetary policies, while the Dodd-Frank Act reformed financial regulation.
 evaluations:
 - name: word_count
   values:
@@ -31,37 +32,39 @@ evaluations:
   values:
   - 0.75
   - 0.75
-  - 1.0
-  average: 0.8333333333333334
-  standard_deviation: 0.14433756729740643
+  - 0.75
+  average: 0.75
+  standard_deviation: 0.0
 - name: relevance_embedding
   values:
-  - 0.8478832431060719
-  - 0.8630394790794824
-  - 0.8194354357955576
-  average: 0.8434527193270372
-  standard_deviation: 0.022137079829870097
+  - 0.8403659234011805
+  - 0.8268720881172088
+  - 0.8481347957740579
+  average: 0.8384576024308158
+  standard_deviation: 0.01075904042745486
 - name: elapsed_seconds
   values:
-  - 1.315575122833252
-  - 1.1391732692718506
-  - 1.0210497379302979
-  average: 1.1585993766784668
-  standard_deviation: 0.14822054791690778
+  - 1.3457179069519043
+  - 1.4084880352020264
+  - 1.4024782180786133
+  average: 1.3855613867441814
+  standard_deviation: 0.03463605977781548
 - name: token_count
   values:
-  - 513
-  - 512
+  - 515
   - 509
-  average: 511.3333333333333
-  standard_deviation: 2.0816659994661326
+  - 516
+  average: 513.3333333333334
+  standard_deviation: 3.7859388972001824
 - name: cost
   values:
-  - 2.745e-06
-  - 2.73e-06
+  - 2.7749999999999997e-06
   - 2.6849999999999997e-06
-  average: 2.72e-06
-  standard_deviation: 3.1224989991992164e-08
+  - 2.7900000000000004e-06
+  average: 2.75e-06
+  standard_deviation: 5.678908345800297e-08
 eval:
   chat_service: openai
+  chat_model: gpt-4o
   embed_service: openai
+  embed_model: text-embedding-3-small

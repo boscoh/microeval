@@ -58,6 +58,16 @@ def extract_evaluation_data(results_dir: Path) -> Dict[str, List[Dict]]:
             basename = result_file.stem
             service, model = parse_service_model_from_basename(basename)
 
+            # Get token_count for cost per million tokens calculation
+            token_count_eval = None
+            for evaluation in pydash.get(data, "evaluations", []):
+                if pydash.get(evaluation, "name") == "token_count":
+                    token_count_eval = evaluation
+                    break
+
+            token_count_avg = pydash.get(token_count_eval, "average") if token_count_eval else None
+            token_count_values = pydash.get(token_count_eval, "values", []) if token_count_eval else []
+
             for evaluation in pydash.get(data, "evaluations", []):
                 eval_name = pydash.get(evaluation, "name")
                 average = pydash.get(evaluation, "average")
@@ -66,13 +76,53 @@ def extract_evaluation_data(results_dir: Path) -> Dict[str, List[Dict]]:
                     if eval_name not in evaluators_data:
                         evaluators_data[eval_name] = []
 
+                    # Convert cost to $ per million tokens
+                    if eval_name == "cost":
+                        cost_values = pydash.get(evaluation, "values", [])
+                        if cost_values and token_count_values and len(cost_values) == len(token_count_values):
+                            # Calculate cost per million tokens for each iteration
+                            cost_per_million_values = [
+                                (cost / tokens * 1_000_000) if tokens > 0 else 0
+                                for cost, tokens in zip(cost_values, token_count_values)
+                            ]
+                            # Recalculate average and standard deviation from converted values
+                            if cost_per_million_values:
+                                average = sum(cost_per_million_values) / len(cost_per_million_values)
+                                if len(cost_per_million_values) > 1:
+                                    mean_val = average
+                                    variance = sum((x - mean_val) ** 2 for x in cost_per_million_values) / (len(cost_per_million_values) - 1)
+                                    std_dev = variance ** 0.5
+                                else:
+                                    std_dev = 0.0
+                            else:
+                                std_dev = 0.0
+                        elif token_count_avg and token_count_avg > 0:
+                            # Fallback: use averages if individual values not available
+                            original_cost_avg = average
+                            average = (original_cost_avg / token_count_avg) * 1_000_000
+                            cost_std = pydash.get(evaluation, "standard_deviation", 0.0)
+                            token_count_std = pydash.get(token_count_eval, "standard_deviation", 0.0)
+                            # Approximate standard deviation using error propagation for division
+                            if original_cost_avg > 0 and token_count_avg > 0:
+                                # Relative error approximation: sqrt((σ_cost/cost)^2 + (σ_tokens/tokens)^2)
+                                cost_rel_error = cost_std / original_cost_avg if original_cost_avg > 0 else 0
+                                token_rel_error = token_count_std / token_count_avg if token_count_avg > 0 else 0
+                                combined_rel_error = (cost_rel_error ** 2 + token_rel_error ** 2) ** 0.5
+                                std_dev = average * combined_rel_error
+                            else:
+                                std_dev = 0.0
+                        else:
+                            std_dev = pydash.get(evaluation, "standard_deviation", 0.0)
+                    else:
+                        std_dev = pydash.get(evaluation, "standard_deviation", 0.0)
+
                     evaluators_data[eval_name].append(
                         {
                             "basename": basename,
                             "service": service,
                             "model": model,
                             "average": average,
-                            "standardDeviation": pydash.get(evaluation, "standard_deviation", 0.0),
+                            "standardDeviation": std_dev,
                         }
                     )
         except Exception as e:

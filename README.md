@@ -308,7 +308,7 @@ Eval service configuration follows this priority order (highest to lowest):
 
 1. **Per-run config** - Explicit settings in individual run YAML files
 2. **Environment variables** - Runtime overrides via `EVAL_*` env vars
-3. **Global eval.json** - Module-level defaults (optional)
+3. **Global eval.yaml** - Module-level defaults (optional)
 4. **Smart defaults** - Automatic fallback logic (see Service Configuration section)
 
 ### Option 1: Per-Run Configuration (Most Explicit)
@@ -344,11 +344,14 @@ Create an `eval.yaml` file at the root of your evaluation directory:
 
 ```yaml
 # Global configuration for all runs
-eval_chat_service: openai
-eval_model: gpt-4o-mini
-eval_embed_service: openai
-embed_model: text-embedding-3-small
+# Format: eval_llm_service, eval_llm_model, eval_embed_llm_service, eval_embed_llm_model
+eval_llm_service: openai
+eval_llm_model: gpt-4o-mini
+eval_embed_llm_service: openai
+eval_embed_llm_model: text-embedding-3-small
 ```
+
+**Note:** The old format (`eval_chat_service`, `eval_model`, `eval_embed_service`, `embed_model`) is still supported for backward compatibility.
 
 This applies to all runs unless overridden by per-run configs or environment variables.
 

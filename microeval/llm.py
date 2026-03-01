@@ -22,11 +22,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 import aioboto3
-import pydash
 import boto3
 import groq
 import ollama
 import openai
+import pydash
 
 logger = logging.getLogger(__name__)
 
@@ -38,18 +38,20 @@ _openai_semaphore = None
 
 def _get_openai_semaphore() -> asyncio.Semaphore:
     """Get or create the global OpenAI semaphore.
-    
+
     :return: Semaphore instance limiting concurrent OpenAI API calls
     """
     global _openai_semaphore
     if _openai_semaphore is None:
         _openai_semaphore = asyncio.Semaphore(_OPENAI_MAX_CONCURRENT)
-        logger.info(f"Initialized OpenAI semaphore with max concurrent={_OPENAI_MAX_CONCURRENT}")
+        logger.info(
+            f"Initialized OpenAI semaphore with max concurrent={_OPENAI_MAX_CONCURRENT}"
+        )
     return _openai_semaphore
 
 
 @lru_cache
-def load_selectable_models() -> Dict[str, Any]:
+def load_models_config() -> Dict[str, Any]:
     """Load and return the models configuration from models.yaml.
 
     :return: Configuration dictionary. Example::
@@ -71,6 +73,7 @@ def load_selectable_models() -> Dict[str, Any]:
         }
     """
     from microeval.utils import load_yaml
+
     config_path = Path(__file__).parent / "models.yaml"
     config = load_yaml(str(config_path))
     logger.info(f"Loaded selectable models from '{config_path}'")
@@ -202,7 +205,9 @@ class SimpleLLMClient(ABC):
         """Generate a text embedding vector for the given input string."""
         pass
 
-    def get_token_cost(self, prompt_tokens: int, completion_tokens: int) -> Optional[float]:
+    def get_token_cost(
+        self, prompt_tokens: int, completion_tokens: int
+    ) -> Optional[float]:
         """Calculate token cost in USD using pricing from models.yaml.
 
         Returns None if pricing data is not available for this model.
@@ -210,7 +215,7 @@ class SimpleLLMClient(ABC):
         if not hasattr(self, "service"):
             return None
 
-        pricing = pydash.get(load_selectable_models(), f"pricing.{self.service}", {})
+        pricing = pydash.get(load_models_config(), f"pricing.{self.service}", {})
         model_pricing = pydash.get(pricing, self.model)
 
         if not model_pricing:
@@ -220,8 +225,9 @@ class SimpleLLMClient(ABC):
                     break
 
         if model_pricing:
-            return (prompt_tokens / 1_000_000) * model_pricing["prompt"] + \
-                   (completion_tokens / 1_000_000) * model_pricing["completion"]
+            return (prompt_tokens / 1_000_000) * model_pricing["prompt"] + (
+                completion_tokens / 1_000_000
+            ) * model_pricing["completion"]
 
         return None
 
@@ -321,7 +327,7 @@ class SimpleLLMClient(ABC):
 
     async def connect(self):
         """Initialize async resources. Override in subclasses as needed.
-        
+
         This method should be idempotent - calling it multiple times should be safe.
         """
         pass
@@ -388,14 +394,21 @@ class OllamaClient(SimpleLLMClient):
                         try:
                             args = json.loads(args) if args else {}
                         except json.JSONDecodeError as e:
-                            logger.warning(f"Failed to parse tool arguments: {args[:50]}... Error: {e}")
+                            logger.warning(
+                                f"Failed to parse tool arguments: {args[:50]}... Error: {e}"
+                            )
                             args = {}
                     elif not isinstance(args, dict):
                         args = {}
-                    new_tool_calls.append({
-                        "id": pydash.get(tc, "id", ""),
-                        "function": {"name": pydash.get(tc, "function.name"), "arguments": args},
-                    })
+                    new_tool_calls.append(
+                        {
+                            "id": pydash.get(tc, "id", ""),
+                            "function": {
+                                "name": pydash.get(tc, "function.name"),
+                                "arguments": args,
+                            },
+                        }
+                    )
                 transformed.append({**msg, "tool_calls": new_tool_calls})
             else:
                 transformed.append(msg)
@@ -477,7 +490,10 @@ class OllamaClient(SimpleLLMClient):
                         function = tool_call.function
                         name = getattr(function, "name", "")
                         args = getattr(function, "arguments", {})
-                        tc_id = getattr(tool_call, "id", None) or f"call_{uuid.uuid4().hex[:8]}"
+                        tc_id = (
+                            getattr(tool_call, "id", None)
+                            or f"call_{uuid.uuid4().hex[:8]}"
+                        )
                     else:
                         continue
 
@@ -491,7 +507,9 @@ class OllamaClient(SimpleLLMClient):
             usage = self._build_usage_metadata(
                 prompt_tokens, completion_tokens, elapsed_seconds
             )
-            return self._build_success_response(response_text, usage, done_reason, tool_calls)
+            return self._build_success_response(
+                response_text, usage, done_reason, tool_calls
+            )
         except Exception as e:
             logger.error(f"Error calling Ollama: {e}")
             raise
@@ -594,7 +612,9 @@ class OpenAIClient(SimpleLLMClient):
             clean_msg = {k: v for k, v in msg.items() if k != "tool_calls"}
             if not clean_msg.get("content"):
                 clean_msg["content"] = ""
-            logger.debug("Stripped tool_calls from assistant message (incomplete sequence)")
+            logger.debug(
+                "Stripped tool_calls from assistant message (incomplete sequence)"
+            )
             return clean_msg
         return msg
 
@@ -641,7 +661,9 @@ class OpenAIClient(SimpleLLMClient):
                     )
             elif role == "assistant":
                 if "tool_calls" in msg:
-                    cleaned_msg = self._handle_incomplete_tool_sequence(msg, i, messages)
+                    cleaned_msg = self._handle_incomplete_tool_sequence(
+                        msg, i, messages
+                    )
                     if cleaned_msg:
                         in_active_tool_sequence = "tool_calls" in cleaned_msg
                         formatted_messages.append(cleaned_msg)
@@ -665,7 +687,7 @@ class OpenAIClient(SimpleLLMClient):
     ) -> Dict[str, Any]:
         """OpenAI implementation of get_completion with full tool support and rate limit retry."""
         await self.connect()
-        
+
         if not self.client or self._closed:
             await self.connect()
 
@@ -674,14 +696,14 @@ class OpenAIClient(SimpleLLMClient):
         base_delay = 1.0
 
         semaphore = _get_openai_semaphore()
-        
+
         for attempt in range(max_retries):
             try:
                 if not self.client or self._closed:
                     await self.connect()
-                
+
                 formatted_messages = self._transform_messages(messages)
-                
+
                 async with semaphore:
                     completion = await self.client.chat.completions.create(
                         model=self.model,
@@ -692,7 +714,9 @@ class OpenAIClient(SimpleLLMClient):
                     )
                 elapsed_seconds = time.time() - start_time
 
-                text = completion.choices[0].message.content if completion.choices else ""
+                text = (
+                    completion.choices[0].message.content if completion.choices else ""
+                )
 
                 if hasattr(completion, "usage") and completion.usage:
                     usage = self._build_usage_metadata(
@@ -717,43 +741,55 @@ class OpenAIClient(SimpleLLMClient):
                     if completion.choices and completion.choices[0].finish_reason
                     else "stop"
                 )
-                return self._build_success_response(text, usage, finish_reason, tool_calls)
+                return self._build_success_response(
+                    text, usage, finish_reason, tool_calls
+                )
             except openai.RateLimitError as e:
                 if attempt == max_retries - 1:
                     logger.error(f"Rate limit error after {max_retries} attempts: {e}")
                     raise
-                
+
                 retry_after = self._extract_retry_after(e)
-                delay = retry_after if retry_after else base_delay * (2 ** attempt)
+                delay = retry_after if retry_after else base_delay * (2**attempt)
                 logger.warning(
                     f"Rate limit hit (attempt {attempt + 1}/{max_retries}), "
                     f"retrying after {delay:.2f}s: {e}"
                 )
                 await asyncio.sleep(delay)
-            except (openai.APIConnectionError, openai.ServiceUnavailableError, openai.Timeout) as e:
+            except (
+                openai.APIConnectionError,
+                openai.ServiceUnavailableError,
+                openai.Timeout,
+            ) as e:
                 if attempt == max_retries - 1:
                     logger.error(f"Retryable error after {max_retries} attempts: {e}")
                     raise
-                
+
                 self._closed = True
                 self.client = None
-                delay = base_delay * (2 ** attempt)
+                delay = base_delay * (2**attempt)
                 logger.warning(
                     f"Retryable error (attempt {attempt + 1}/{max_retries}), "
                     f"reconnecting and retrying after {delay:.2f}s: {type(e).__name__}: {e}"
                 )
                 await asyncio.sleep(delay)
                 await self.connect()
-            except (openai.AuthenticationError, openai.PermissionError, openai.InvalidRequestError) as e:
+            except (
+                openai.AuthenticationError,
+                openai.PermissionError,
+                openai.InvalidRequestError,
+            ) as e:
                 logger.error(f"Non-retryable OpenAI error: {type(e).__name__}: {e}")
                 raise
             except Exception as e:
-                logger.error(f"Unexpected error calling OpenAI: {type(e).__name__}: {e}")
+                logger.error(
+                    f"Unexpected error calling OpenAI: {type(e).__name__}: {e}"
+                )
                 raise
 
     def _extract_retry_after(self, error: openai.RateLimitError) -> Optional[float]:
         """Extract retry-after delay from rate limit error.
-        
+
         :param error: OpenAI RateLimitError exception
         :return: Retry delay in seconds, or None if not found
         """
@@ -764,22 +800,22 @@ class OpenAIClient(SimpleLLMClient):
                     return float(retry_after)
                 except (ValueError, TypeError):
                     pass
-        
+
         error_str = str(error)
         match = re.search(r"try again in (\d+)ms", error_str)
         if match:
             return float(match.group(1)) / 1000.0
-        
+
         match = re.search(r"retry after (\d+(?:\.\d+)?)", error_str, re.IGNORECASE)
         if match:
             return float(match.group(1))
-        
+
         return None
 
     async def get_embedding(self, input: str) -> List[float]:
         """Generate text embeddings using OpenAI's embedding model with rate limit retry."""
         await self.connect()
-        
+
         if not self.client or self._closed:
             await self.connect()
 
@@ -787,12 +823,12 @@ class OpenAIClient(SimpleLLMClient):
         base_delay = 1.0
 
         semaphore = _get_openai_semaphore()
-        
+
         for attempt in range(max_retries):
             try:
                 if not self.client or self._closed:
                     await self.connect()
-                
+
                 async with semaphore:
                     response = await self.client.embeddings.create(
                         model=self.model, input=input
@@ -802,33 +838,45 @@ class OpenAIClient(SimpleLLMClient):
                 if attempt == max_retries - 1:
                     logger.error(f"Rate limit error after {max_retries} attempts: {e}")
                     raise RuntimeError(f"Error generating embedding: {str(e)}")
-                
+
                 retry_after = self._extract_retry_after(e)
-                delay = retry_after if retry_after else base_delay * (2 ** attempt)
+                delay = retry_after if retry_after else base_delay * (2**attempt)
                 logger.warning(
                     f"Rate limit hit for embeddings (attempt {attempt + 1}/{max_retries}), "
                     f"retrying after {delay:.2f}s: {e}"
                 )
                 await asyncio.sleep(delay)
-            except (openai.APIConnectionError, openai.ServiceUnavailableError, openai.Timeout) as e:
+            except (
+                openai.APIConnectionError,
+                openai.ServiceUnavailableError,
+                openai.Timeout,
+            ) as e:
                 if attempt == max_retries - 1:
                     logger.error(f"Retryable error after {max_retries} attempts: {e}")
                     raise RuntimeError(f"Error generating embedding: {str(e)}")
-                
+
                 self._closed = True
                 self.client = None
-                delay = base_delay * (2 ** attempt)
+                delay = base_delay * (2**attempt)
                 logger.warning(
                     f"Retryable error for embeddings (attempt {attempt + 1}/{max_retries}), "
                     f"reconnecting and retrying after {delay:.2f}s: {type(e).__name__}: {e}"
                 )
                 await asyncio.sleep(delay)
                 await self.connect()
-            except (openai.AuthenticationError, openai.PermissionError, openai.InvalidRequestError) as e:
-                logger.error(f"Non-retryable OpenAI error for embeddings: {type(e).__name__}: {e}")
+            except (
+                openai.AuthenticationError,
+                openai.PermissionError,
+                openai.InvalidRequestError,
+            ) as e:
+                logger.error(
+                    f"Non-retryable OpenAI error for embeddings: {type(e).__name__}: {e}"
+                )
                 raise RuntimeError(f"Error generating embedding: {str(e)}")
             except Exception as e:
-                logger.error(f"Unexpected error calling OpenAI embed: {type(e).__name__}: {e}")
+                logger.error(
+                    f"Unexpected error calling OpenAI embed: {type(e).__name__}: {e}"
+                )
                 raise RuntimeError(f"Error generating embedding: {str(e)}")
 
 
@@ -880,13 +928,15 @@ class GroqClient(OpenAIClient):
 
             if tools:
                 api_params["tools"] = tools
-                supports_parallel = any([
-                    self.model.startswith("llama-3."),
-                    self.model.startswith("llama-4"),
-                    self.model.startswith("meta-llama/llama-4"),
-                    self.model.startswith("qwen/"),
-                    self.model.startswith("moonshotai/"),
-                ])
+                supports_parallel = any(
+                    [
+                        self.model.startswith("llama-3."),
+                        self.model.startswith("llama-4"),
+                        self.model.startswith("meta-llama/llama-4"),
+                        self.model.startswith("qwen/"),
+                        self.model.startswith("moonshotai/"),
+                    ]
+                )
                 if supports_parallel:
                     api_params["parallel_tool_calls"] = True
 
@@ -960,7 +1010,9 @@ def get_aws_config():
         if profile_name in available_profiles:
             aws_config["profile_name"] = profile_name
         else:
-            logger.info(f"AWS profile '{profile_name}' not found, using default credential chain")
+            logger.info(
+                f"AWS profile '{profile_name}' not found, using default credential chain"
+            )
             os.environ.pop("AWS_PROFILE", None)
 
     region = os.getenv("AWS_REGION")
@@ -971,7 +1023,11 @@ def get_aws_config():
     credentials = session.get_credentials()
 
     if not credentials:
-        hint = f"Available profiles: {', '.join(available_profiles)}\n" if available_profiles else ""
+        hint = (
+            f"Available profiles: {', '.join(available_profiles)}\n"
+            if available_profiles
+            else ""
+        )
         raise ValueError(
             f"No AWS credentials found.\n{hint}"
             "To configure: aws configure\n"
@@ -979,7 +1035,9 @@ def get_aws_config():
         )
 
     if not credentials.access_key or not credentials.secret_key:
-        raise ValueError("Incomplete AWS credentials (missing access key or secret key)")
+        raise ValueError(
+            "Incomplete AWS credentials (missing access key or secret key)"
+        )
 
     session.client("sts").get_caller_identity()
 
@@ -993,7 +1051,9 @@ def get_aws_config():
                 try:
                     cache_data = json.loads(cache_file.read_text())
                     if "expiresAt" in cache_data:
-                        expires_at = datetime.fromisoformat(cache_data["expiresAt"].replace("Z", "+00:00"))
+                        expires_at = datetime.fromisoformat(
+                            cache_data["expiresAt"].replace("Z", "+00:00")
+                        )
                         if expires_at < datetime.now(timezone.utc):
                             sso_expired_msg = (
                                 f"AWS SSO session expired for profile '{profile_name}'. "
@@ -1115,7 +1175,9 @@ class BedrockClient(SimpleLLMClient):
                     tool_batch.append(messages[i])
                     i += 1
                 if len(tool_batch) > 1:
-                    logger.debug(f"Batching {len(tool_batch)} tool results into single user message")
+                    logger.debug(
+                        f"Batching {len(tool_batch)} tool results into single user message"
+                    )
                     combined_content = [
                         {
                             "toolResult": {
@@ -1237,7 +1299,9 @@ class BedrockClient(SimpleLLMClient):
                     "toolSpec": {
                         "name": pydash.get(tool, "function.name"),
                         "description": pydash.get(tool, "function.description", ""),
-                        "inputSchema": {"json": pydash.get(tool, "function.parameters", {})},
+                        "inputSchema": {
+                            "json": pydash.get(tool, "function.parameters", {})
+                        },
                     }
                 }
                 for tool in tools
@@ -1324,7 +1388,9 @@ def get_llm_client(client_type: LLMService, **kwargs) -> SimpleLLMClient:
     client_type = client_type.lower()
 
     if "model" not in kwargs:
-        default_models = pydash.get(load_selectable_models(), f"chat_models.{client_type}", [])
+        default_models = pydash.get(
+            load_models_config(), f"chat_models.{client_type}", []
+        )
         if default_models:
             kwargs["model"] = (
                 default_models[0]
@@ -1334,7 +1400,7 @@ def get_llm_client(client_type: LLMService, **kwargs) -> SimpleLLMClient:
 
     if client_type not in LLM_CLIENTS:
         raise ValueError(f"Unknown chat client type: {client_type}")
-    
+
     model = kwargs.get("model", "default")
     logger.info(f"Connected '{client_type}':'{model}'")
     return LLM_CLIENTS[client_type](**kwargs)

@@ -1,5 +1,0 @@
----
-input: >-
-  What is the difference between `__str__` and `__repr__` in Python?
-output: |
-  `__repr__` targets developers: it should return an unambiguous string, ideally one that could recreate the object (e.g. `Point(x=1, y=2)`). `__str__` targets end users: a readable, human-friendly description. `print()` and `str()` use `__str__`; the interactive REPL, `repr()`, and container displays (lists, dicts) use `__repr__`. If `__str__` is not defined Python falls back to `__repr__`, so when in doubt define `__repr__` — it serves both purposes.

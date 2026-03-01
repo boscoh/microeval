@@ -1,17 +1,17 @@
 ---
 texts:
 - |-
-  • Issued millions of subprime mortgages to borrowers with poor credit histories, triggering widespread defaults.
-  • Bundled these loans into complex securities called CDOs, which were given top AAA ratings by flawed models.
-  • Purchased these instruments believing they were safe, contributing to a global credit market panic.
+  • Collapsed U.S. housing market sparked global financial crisis in 2008 with mortgage defaults surging rapidly.
+  • Flawed credit rating models gave AAA ratings to toxic securities, luring institutional investors worldwide.
+  • Government intervention via TARP and monetary easing failed to stem crisis, which spread to real economy.
 - |-
-  • Collapsed housing market triggers massive mortgage defaults and subsequent crisis unfolding.
-  • Global investors blindly purchase flawed securities with top AAA ratings, unaware risks.
-  • U.S. government intervenes with TARP and monetary policy to stabilize financial markets.
+  • Collapsed U.S. housing market sparked global economic crisis with widespread panic and instability.
+  • Issued millions of subprime mortgages to borrowers with poor credit histories, causing defaults surge.
+  • Triggered massive bailout package with $700 billion in TARP funds to stabilize financial institutions.
 - |-
-  • Collapsing housing market triggers widespread panic across global credit markets.
-  • Mortgage defaults surge as home prices peak in 2006, causing hedge funds to shut down.
-  • Government intervenes with TARP and quantitative easing measures to stabilize financial institutions.
+  • Collapsed: U.S. housing market began to decline in 2006, triggering a surge of mortgage defaults nationwide.
+  • Bundled: Credit rating agencies gave flawed CDOs top AAA ratings, attracting global institutional investors.
+  • Triggered: Lehman Brothers' bankruptcy in September 2008 sent panic through global credit markets worldwide.
 evaluations:
 - name: word_count
   values:
@@ -29,32 +29,32 @@ evaluations:
   standard_deviation: 0.0
 - name: relevance_llm
   values:
+  - 0.75
   - 0.5
   - 0.5
-  - 0.5
-  average: 0.5
-  standard_deviation: 0.0
+  average: 0.5833333333333334
+  standard_deviation: 0.14433756729740643
 - name: relevance_embedding
   values:
-  - 0.6026363230640492
-  - 0.7381394157206831
-  - 0.755106373895303
-  average: 0.6986273708933451
-  standard_deviation: 0.08356243393385242
+  - 0.7997738954327559
+  - 0.7538210797741287
+  - 0.7062681022829681
+  average: 0.7532876924966175
+  standard_deviation: 0.04675517847932551
 - name: elapsed_seconds
   values:
-  - 5.225977182388306
-  - 2.181854009628296
-  - 2.3109569549560547
-  average: 3.2395960489908853
-  standard_deviation: 1.7214672224474652
+  - 2.797239065170288
+  - 2.533906936645508
+  - 3.0207958221435547
+  average: 2.78398060798645
+  standard_deviation: 0.24371507282183902
 - name: token_count
   values:
   - 356
-  - 346
-  - 348
-  average: 350
-  standard_deviation: 5.291502622129181
+  - 352
+  - 355
+  average: 354.3333333333333
+  standard_deviation: 2.0816659994661326
 - name: cost
   values:
   - 0.0
@@ -64,4 +64,6 @@ evaluations:
   standard_deviation: 0.0
 eval:
   chat_service: openai
+  chat_model: gpt-4o
   embed_service: openai
+  embed_model: text-embedding-3-small

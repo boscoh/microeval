@@ -100,11 +100,11 @@ class EvalResult(BaseModel):
 # Run Domain
 class RunConfig(BaseModel):
     """Configuration for a single evaluation run.
-
+    
     Supports eval.yaml global config with field names:
-    - eval_llm_service / eval_llm_model (for LLM-based evaluators)
-    - eval_embed_llm_service / eval_embed_llm_model (for embedding-based evaluators)
-
+    - chat_service / chat_model (for LLM-based evaluators)
+    - embed_service / embed_model (for embedding-based evaluators)
+    
     These map to internal fields: eval_chat_service, eval_model, eval_embed_service, embed_model
     """
 
@@ -119,7 +119,7 @@ class RunConfig(BaseModel):
     repeat: int = 1
     temperature: float = 0.0
     evaluators: List[Union[str, EvaluatorConfig, Dict[str, Any]]] = Field(
-        default_factory=lambda: ["coherence"]
+        default_factory=lambda: ["equivalence"]
     )
     eval_chat_service: Optional[LLMService] = None
     eval_model: Optional[str] = None
@@ -135,10 +135,10 @@ class RunConfig(BaseModel):
         .. code-block:: yaml
 
             # Global configuration for all runs
-            eval_llm_service: openai
-            eval_llm_model: gpt-4o-mini
-            eval_embed_llm_service: openai
-            eval_embed_llm_model: text-embedding-3-small
+            chat_service: openai
+            chat_model: gpt-4o-mini
+            embed_service: openai
+            embed_model: text-embedding-3-small
         """
         data = load_yaml(file_path)
 
@@ -154,23 +154,23 @@ class RunConfig(BaseModel):
                 )
 
         # Map eval.yaml format to internal field names
+        # eval.yaml uses: chat_service, chat_model, embed_service, embed_model (matches eval results structure)
         field_mapping = {
-            "eval_llm_service": "eval_chat_service",
-            "eval_llm_model": "eval_model",
-            "eval_embed_llm_service": "eval_embed_service",
-            "eval_embed_llm_model": "embed_model",
+            "chat_service": "eval_chat_service",
+            "chat_model": "eval_model",
+            "embed_service": "eval_embed_service",
+            "embed_model": "embed_model",
         }
 
-        # Apply field mapping to both data and global_config
-        for config_dict in [data, global_config]:
-            items_to_move = [
-                (new_key, internal_key)
-                for new_key, internal_key in field_mapping.items()
-                if new_key in config_dict
-            ]
-            for new_key, internal_key in items_to_move:
-                config_dict[internal_key] = config_dict[new_key]
-                del config_dict[new_key]
+        # Apply field mapping only to global_config (eval.yaml)
+        items_to_move = [
+            (new_key, internal_key)
+            for new_key, internal_key in field_mapping.items()
+            if new_key in global_config
+        ]
+        for new_key, internal_key in items_to_move:
+            global_config[internal_key] = global_config[new_key]
+            del global_config[new_key]
 
         env_key_mapping = {
             "eval_chat_service": "EVAL_CHAT_SERVICE",
@@ -226,17 +226,6 @@ class RunConfig(BaseModel):
         del save_config["prompt"]
         if "service" in save_config:
             save_config["chat_service"] = save_config.pop("service")
-
-        # Convert internal field names to eval.yaml format
-        field_mapping = {
-            "eval_chat_service": "eval_llm_service",
-            "eval_model": "eval_llm_model",
-            "eval_embed_service": "eval_embed_llm_service",
-            "embed_model": "eval_embed_llm_model",
-        }
-        for internal_key, yaml_key in field_mapping.items():
-            if internal_key in save_config and save_config[internal_key] is not None:
-                save_config[yaml_key] = save_config.pop(internal_key)
 
         # Remove None values so defaults can be resolved when reading back
         save_config = {k: v for k, v in save_config.items() if v is not None}

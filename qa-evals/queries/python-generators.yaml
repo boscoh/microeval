@@ -1,5 +1,0 @@
----
-input: >-
-  What is the difference between `yield` and `yield from` in Python?
-output: |
-  `yield` produces a single value from the generator. `yield from iterable` delegates to a sub-iterator, yielding all its values one by one — equivalent to a `for x in iterable: yield x` loop, but also transparently forwards `send()` and `throw()` calls into the sub-generator. This bidirectional delegation makes `yield from` essential for composing generators and for writing coroutines.

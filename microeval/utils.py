@@ -13,6 +13,7 @@ _MAX_LEN_LINE = 80
 
 # --- YAML ---
 
+
 def _folded_str_yaml_representer(dumper, data):
     if isinstance(data, str):
         if "\n" in data:
@@ -50,6 +51,7 @@ def save_yaml(data: dict, file_path: str):
 
 
 # --- JSON ---
+
 
 def snap_score(value: float, valid_scores: tuple = (0.0, 0.5, 1.0)) -> float:
     return min(valid_scores, key=lambda s: abs(s - value))

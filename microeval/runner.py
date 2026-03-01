@@ -1,10 +1,9 @@
 import logging
 from statistics import mean, stdev
+from typing import TYPE_CHECKING, Optional
 
 import pydash
 from path import Path
-
-from typing import TYPE_CHECKING, Optional
 
 from microeval.config import _get_connected_llm_client, _get_default_model
 from microeval.evaluator import EvaluationRunner
@@ -20,9 +19,9 @@ logger = logging.getLogger(__name__)
 class Runner:
     def __init__(self, config: RunConfig):
         """Initialize Runner with config.
-        
+
         Clients are created and connected when connect() is called.
-        
+
         :param config: RunConfig with evaluation settings
         """
         self._config = config
@@ -32,9 +31,11 @@ class Runner:
         self._evaluation_runner = None
         self._connected = False
 
-    def _resolve_service_model(self, service: str, model: str, model_type: str = "chat_models") -> tuple[str, str]:
+    def _resolve_service_model(
+        self, service: str, model: str, model_type: str = "chat_models"
+    ) -> tuple[str, str]:
         """Resolve service and model with defaults.
-        
+
         :param service: Service name
         :param model: Model name (may be empty)
         :param model_type: Type of models to look up ("chat_models" or "embed_models")
@@ -59,13 +60,13 @@ class Runner:
         else:
             service = self._config.chat_service
             model = self._config.model
-        
+
         service, model = self._resolve_service_model(service, model, "chat_models")
         return await _get_connected_llm_client(service, model)
 
     async def _get_embed_client(self) -> "SimpleLLMClient":
         """Get and connect embedding client for embedding-based evaluators.
-        
+
         Selection priority:
         1. eval_embed_service/embed_model if specified
         2. Default embed model from eval_chat_service or chat_service
@@ -74,27 +75,33 @@ class Runner:
         """
         if self._config.eval_embed_service:
             service, model = self._resolve_service_model(
-                self._config.eval_embed_service, self._config.embed_model, "embed_models"
+                self._config.eval_embed_service,
+                self._config.embed_model,
+                "embed_models",
             )
             return await _get_connected_llm_client(service, model)
 
         eval_chat_service = self._config.eval_chat_service or self._config.chat_service
-        
+
         if eval_chat_service and eval_chat_service != "groq":
             client = await self._try_get_embed_client_from_service(eval_chat_service)
             if client:
                 return client
 
         if self._config.chat_service and self._config.chat_service != "groq":
-            client = await self._try_get_embed_client_from_service(self._config.chat_service)
+            client = await self._try_get_embed_client_from_service(
+                self._config.chat_service
+            )
             if client:
                 return client
 
         return await _get_connected_llm_client("openai", "text-embedding-3-small")
 
-    async def _try_get_embed_client_from_service(self, service: str) -> Optional["SimpleLLMClient"]:
+    async def _try_get_embed_client_from_service(
+        self, service: str
+    ) -> Optional["SimpleLLMClient"]:
         """Try to get an embedding client from a service.
-        
+
         :param service: Service name to try
         :return: Embedding client if found, None otherwise
         """
@@ -106,27 +113,27 @@ class Runner:
             model = self._config.eval_model or "default"
         else:
             model = self._config.model or "default"
-        
+
         client = await _get_connected_llm_client(service, model)
         if hasattr(client, "get_embedding"):
             return client
-        
+
         return None
 
     async def connect(self) -> bool:
         """Get and connect all LLM clients (idempotent - clients are cached by service/model).
-        
+
         Clients are automatically connected and cached, so multiple calls with the same
         config return the same client instances.
         """
         self._main_llm_client = await self._get_main_llm_client()
         self._eval_llm_client = await self._get_eval_llm_client()
         self._eval_embed_llm_client = await self._get_embed_client()
-        
+
         self._evaluation_runner = EvaluationRunner(
             self._eval_llm_client, self._config, self._eval_embed_llm_client
         )
-        
+
         self._connected = True
         return True
 
@@ -170,7 +177,9 @@ class Runner:
                 logger.debug(f"ElapsedSeconds: {elapsed_seconds}")
 
                 usage = pydash.get(response, "metadata.usage")
-                token_count = pydash.get(usage, "prompt_tokens", 0) + pydash.get(usage, "completion_tokens", 0)
+                token_count = pydash.get(usage, "prompt_tokens", 0) + pydash.get(
+                    usage, "completion_tokens", 0
+                )
                 cost_value = self._main_llm_client.get_token_cost(
                     pydash.get(usage, "prompt_tokens", 0),
                     pydash.get(usage, "completion_tokens", 0),
@@ -200,7 +209,9 @@ class Runner:
                 "evaluations": evaluations,
                 "eval": {
                     "chat_service": self._eval_llm_client.service,
+                    "chat_model": self._eval_llm_client.model or "default",
                     "embed_service": self._eval_embed_llm_client.service,
+                    "embed_model": self._eval_embed_llm_client.model or "default",
                 },
             }
             save_yaml(eval_results, results_path)
@@ -213,9 +224,9 @@ class Runner:
 
 def create_runner(file_path: str) -> Runner:
     """Create a Runner instance from config file.
-    
+
     Clients are created and connected when connect() is called.
-    
+
     :param file_path: Path to run configuration YAML file
     :return: Runner instance (call connect() to initialize clients)
     """
@@ -225,7 +236,7 @@ def create_runner(file_path: str) -> Runner:
 
 async def run_all(file_paths):
     """Run all evaluations sequentially.
-    
+
     Clients are cached and reused across runs, so they are not closed between runs.
     They will be cleaned up when the process exits.
     """

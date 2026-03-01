@@ -1,19 +1,16 @@
 ---
 texts:
 - |-
-  - The 2008 financial crisis originated from subprime mortgages bundled into CDOs, mistakenly rated AAA by credit agencies.
-  - Lehman Brothers' bankruptcy and AIG's near-collapse triggered global panic, despite government interventions like TARP.
-  - The crisis led to regulatory reforms, including the Dodd-Frank Act, reshaping financial oversight and risk management.
-- "- The 2008 financial crisis began with the collapse of the U.S. housing market\
-  \ and subprime mortgage defaults.  \n- Lehman Brothers' bankruptcy and AIG's collapse\
-  \ triggered global panic, leading to U.S. government intervention.  \n- The crisis\
-  \ led to the Dodd-Frank Act, reshaping financial oversight and improving regulatory\
-  \ frameworks.  "
-- "- The 2008 financial crisis originated from subprime mortgages bundled into CDOs,\
-  \ misleadingly rated AAA by credit agencies.  \n- Lehman Brothers' bankruptcy and\
-  \ AIG's collapse in 2008 triggered global market panic and credit market disruption.\
-  \  \n- U.S. government response included TARP, Fed rate cuts, and Dodd-Frank Act,\
-  \ reshaping financial regulation and oversight.  "
+  - Misleading AAA ratings on subprime mortgage-backed securities triggered global financial panic.
+  - Government interventions like TARP and quantitative easing aimed to stabilize collapsing markets.
+  - Dodd-Frank Act reformed financial regulation to prevent future systemic crises.
+- |-
+  - Triggered by subprime mortgages, the 2008 financial crisis led to massive defaults and global market panic.
+  - Government interventions, including TARP and Federal Reserve measures, aimed to stabilize the economy.
+  - Post-crisis reforms, such as the Dodd-Frank Act, sought to enhance financial regulation and oversight.
+- "- Subprime mortgage bundling and flawed AAA ratings precipitated financial crisis\
+  \  \n- Government intervention and regulatory reforms followed severe economic contraction\
+  \  \n- Dodd-Frank Act introduced stringent financial oversight and consumer protection"
 evaluations:
 - name: word_count
   values:
@@ -26,9 +23,9 @@ evaluations:
   values:
   - 0.5
   - 0.5
-  - 1.0
-  average: 0.6666666666666666
-  standard_deviation: 0.28867513459481287
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
 - name: relevance_llm
   values:
   - 0.75
@@ -38,31 +35,34 @@ evaluations:
   standard_deviation: 0.0
 - name: relevance_embedding
   values:
-  - 0.8184465006642704
-  - 0.8441629970804284
-  - 0.8291150951619837
-  average: 0.8305748643022275
-  standard_deviation: 0.012920245409343946
+  - 0.7791694972706222
+  - 0.8170291718525131
+  - 0.7348850982016255
+  average: 0.7770279224415869
+  standard_deviation: 0.04111389018387679
 - name: elapsed_seconds
   values:
-  - 1.0918500423431396
-  - 1.0530099868774414
-  - 1.4070839881896973
-  average: 1.1839813391367595
-  standard_deviation: 0.19418607439250987
+  - 2.1719248294830322
+  - 0.6554660797119141
+  - 0.5641160011291504
+  average: 1.1305023034413655
+  standard_deviation: 0.9030541885869993
 - name: token_count
   values:
-  - 512
-  - 511
-  - 521
-  average: 514.6666666666666
-  standard_deviation: 5.507570547286102
+  - 481
+  - 500
+  - 473
+  average: 484.6666666666667
+  standard_deviation: 13.868429375143148
 - name: cost
   values:
-  - 2.73e-06
-  - 2.7150000000000003e-06
-  - 2.865e-06
-  average: 2.77e-06
-  standard_deviation: 8.261355820929146e-08
-eval_chat_service: openai
-eval_embed_service: openai
+  - 7.427999999999999e-07
+  - 8.339999999999999e-07
+  - 7.044e-07
+  average: 7.604e-07
+  standard_deviation: 6.656846100068706e-08
+eval:
+  chat_service: openai
+  chat_model: gpt-4o
+  embed_service: openai
+  embed_model: text-embedding-3-small

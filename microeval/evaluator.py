@@ -209,6 +209,11 @@ class LLMEvaluator(BaseEvaluator):
 
 @register_evaluator("equivalence")
 class EquivalenceEvaluator(LLMEvaluator):
+    """Evaluate semantic equivalence between response and expected output.
+
+    Expected params: None
+    """
+
     async def evaluate(self, response_text: str) -> Dict[str, Any]:
         """Evaluate semantic equivalence between response and expected output.
 
@@ -262,6 +267,10 @@ class EquivalenceEvaluator(LLMEvaluator):
 
 @register_evaluator("relevance_llm")
 class RelevanceLLMEvaluator(LLMEvaluator):
+    """Rate how well the response addresses the question.
+
+    Expected params: None
+    """
     valid_scores = (0.0, 0.25, 0.5, 0.75, 1.0)
 
     def build_prompt(self, response_text: str) -> str:
@@ -300,7 +309,10 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
 
 @register_evaluator("relevance_embedding")
 class RelevanceEmbeddingEvaluator(BaseEvaluator):
-    """Calculate relevance using cosine similarity of embeddings between question and response."""
+    """Calculate relevance using cosine similarity of embeddings between question and response.
+
+    Expected params: None
+    """
 
     async def evaluate(self, response_text: str) -> Dict[str, Any]:
         if not response_text.strip():
@@ -362,7 +374,20 @@ class RelevanceEmbeddingEvaluator(BaseEvaluator):
 
 @register_evaluator("word_count")
 class WordCountEvaluator(BaseEvaluator):
-    """Params: min_words, max_words, target_words (takes precedence)."""
+    """Evaluate response length against word count parameters.
+
+    Expected params:
+
+    .. code-block:: json
+
+        {
+          "min_words": 50,
+          "max_words": 200,
+          "target_words": 100
+        }
+
+    Note: ``target_words`` takes precedence over ``min_words`` and ``max_words``.
+    """
 
     async def evaluate(self, response_text: str) -> Dict[str, Any]:
         """Evaluate response length against word count parameters.

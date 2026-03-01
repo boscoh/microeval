@@ -13,12 +13,12 @@ from path import Path
 from pydantic import BaseModel
 
 from microeval import __version__
+from microeval.config import load_env
 from microeval.evaluator import get_available_evaluators
 from microeval.graph import extract_evaluation_data, generate_plotly_graph
 from microeval.logger import setup_logging
 from microeval.runner import create_runner
 from microeval.schemas import RunConfig, TableType, evals_dir, ext_from_table
-from microeval.config import load_env
 from microeval.utils import load_yaml, save_yaml
 
 logger = logging.getLogger(__name__)
@@ -123,7 +123,7 @@ def get_graph_data():
         evaluator_labels = {
             "elapsed_seconds": "Elapsed Time (seconds)",
             "token_count": "Token Count",
-            "cost": "Cost ($)",
+            "cost": "Cost ($ per million tokens)",
             "coherence": "Coherence Score (0-1)",
             "equivalence": "Equivalence Score (0-1)",
             "word_count": "Word Count Score (0-1)",
@@ -154,11 +154,13 @@ def get_defaults():
     """
     Response: { "content": object }
     """
-    from microeval.llm import load_selectable_models
-    chat_models = load_selectable_models()["chat_models"]
+    from microeval.llm import load_models_config
+
+    chat_models = load_models_config()["chat_models"]
 
     # Try to load models.yaml from the eval directory, fall back to package default
     from microeval.utils import load_yaml
+
     models_path = Path(evals_dir.name) / "models.yaml"
     if models_path.exists():
         try:

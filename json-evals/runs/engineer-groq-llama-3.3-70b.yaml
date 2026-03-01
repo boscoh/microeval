@@ -1,9 +1,0 @@
----
-query_ref: engineer
-prompt_ref: candidate-skills
-chat_service: groq
-model: llama-3.3-70b-versatile
-repeat: 3
-temperature: 0.0
-evaluators:
-- equivalence

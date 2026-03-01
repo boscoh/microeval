@@ -11,12 +11,12 @@ from path import Path
 
 from microeval import __version__
 from microeval.chat import main as chat_main
-from microeval.llm import LLMService, load_selectable_models
+from microeval.config import load_env
+from microeval.llm import LLMService, load_models_config
 from microeval.logger import setup_logging
 from microeval.runner import run_all
 from microeval.schemas import evals_dir
 from microeval.server import poll_and_open_browser
-from microeval.config import load_env
 
 logger = logging.getLogger(__name__)
 
@@ -109,7 +109,8 @@ def _run_demo(template_name: str, base_dir: str, port: int):
 
         # Copy the LLM models config (chat_models and embed_models) to the demo directory
         from microeval.utils import save_yaml
-        llm_config = load_selectable_models()
+
+        llm_config = load_models_config()
         config_path = demo_dir / "models.yaml"
         save_yaml(llm_config, str(config_path))
         logger.info(f"Created models.yaml in {base_dir}")
