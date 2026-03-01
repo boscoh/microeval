@@ -29,8 +29,6 @@ from botocore.exceptions import ClientError
 
 logger = logging.getLogger(__name__)
 
-AIOBOTO3_CLEANUP_DELAY_SECONDS = 0.1
-
 
 @lru_cache
 def load_config() -> Dict[str, Any]:
@@ -781,6 +779,8 @@ def get_aws_config():
 
 
 class BedrockClient(SimpleLLMClient):
+    _CLEANUP_DELAY_SECONDS = 0.1
+
     def __init__(
         self,
         model: str = None,
@@ -814,7 +814,7 @@ class BedrockClient(SimpleLLMClient):
             await self._client_ctx.__aexit__(None, None, None)
             self.client = None
             self._closed = True
-            await asyncio.sleep(AIOBOTO3_CLEANUP_DELAY_SECONDS)
+            await asyncio.sleep(self._CLEANUP_DELAY_SECONDS)
 
     def _build_result_from_response(
         self, response: Any, start_time: float

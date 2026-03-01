@@ -204,12 +204,12 @@
                           i.fas.fa-trash
 
                   //// Run tab - central column
-                .d-flex.flex-column.scrollable-column.border.flex-grow-1
-                  .px-3.pt-4
-
+                .d-flex.flex-column.border.scrollable-column(style="flex: 1 1 0; min-width: 0;")
+                  .px-3.pt-4(style="flex-shrink: 0; background: white; z-index: 10; border-bottom: 1px solid #dee2e6;")
                     .d-flex.align-items-center
                       h3.mb-0 Run [{{selectedRunName}}]
                       span.small.saving-indicator(:class="{visible: showSavingRun, fading: fadingSavingRun}") saving...
+                  .px-3.pt-4.pb-5(style="flex: 1 1 0; overflow-y: auto; min-height: 0;")
 
                     .mt-4.d-flex.flex-wrap.align-items-start.gap-3
                       .d-flex.align-items-center.gap-2
@@ -303,10 +303,10 @@
                       )
 
                 //// Run tab - right column
-                .d-flex.flex-column.scrollable-column.border-end.flex-grow-1
-                  .px-3.pt-4
-
+                .d-flex.flex-column.border-end.scrollable-column(style="flex: 1 1 0; min-width: 0;")
+                  .px-3.pt-4(style="flex-shrink: 0; background: white; z-index: 10; border-bottom: 1px solid #dee2e6;")
                     h3 Results
+                  .px-3.pt-4(style="flex: 1 1 0; overflow-y: auto; min-height: 0;")
 
                     .mt-4
                     template(v-if="runResult && runResult.length")
@@ -326,9 +326,13 @@
                       .alert.alert-info(role="alert")
                         | No results found. Click "evaluate" to run this configuration.
 
-                    .form-group(v-if="sampleOutput")
-                      h5.mt-3 Sample Model Response
-                      textarea.form-control(rows="8" v-model="sampleOutput" readonly)
+                    .form-group(v-if="sampleOutput && sampleOutput.length")
+                      h5.mt-3 Model Responses
+                      .model-responses-container(style="max-height: none;")
+                        .mb-3(v-for="(response, index) in sampleOutput" :key="index")
+                          .d-flex.align-items-center.mb-2
+                            strong Response {{ index + 1 }}
+                          pre.bg-light.border.rounded.p-3(style="white-space: pre-wrap; word-wrap: break-word; margin: 0;") {{ response }}
 
                     .pb-5
                     .pb-5
@@ -623,7 +627,7 @@
       const fadingSavingPrompt = promptSaving.fading;
       const showSavingQuery = querySaving.show;
       const fadingSavingQuery = querySaving.fading;
-      const sampleOutput = ref("");
+      const sampleOutput = ref([]);
 
       const promptRefs = ref([]);
       const selectedPromptRef = ref("");
@@ -803,12 +807,12 @@
 
       async function loadRunResult(runName) {
         runResult.value = {};
-        sampleOutput.value = "";
+        sampleOutput.value = [];
         try {
           const content = await fetchObject("result", runName);
           runResult.value = content.evaluations || [];
           const responseTexts = content.texts || [];
-          sampleOutput.value = responseTexts[0] || "";
+          sampleOutput.value = Array.isArray(responseTexts) ? responseTexts : [];
         } catch (error) {
           console.error("Failed to load run result:", error);
         }
@@ -826,7 +830,7 @@
         
         if (selectedRunName.value === runName) {
           runResult.value = {};
-          sampleOutput.value = "";
+          sampleOutput.value = [];
         }
         
         showNotification(`Starting evaluation for ${runName}...`, "info");
