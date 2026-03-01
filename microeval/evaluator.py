@@ -307,7 +307,7 @@ def cosine_similarity(vec1: List[float], vec2: List[float]) -> float:
     return dot_product / (magnitude1 * magnitude2)
 
 
-@register_evaluator("relevance_embedding")
+@register_evaluator("relevance_embed")
 class RelevanceEmbeddingEvaluator(BaseEvaluator):
     """Calculate relevance using cosine similarity of embeddings between question and response.
 
@@ -472,7 +472,7 @@ class EvaluationRunner:
                 evaluator_cls = EVALUATOR_REGISTRY[name]
                 evaluator_llm = (
                     embed_client
-                    if name == "relevance_embedding" and embed_client
+                    if name == "relevance_embed" and embed_client
                     else llm
                 )
                 self._evaluators[name] = evaluator_cls(

@@ -116,7 +116,7 @@ evaluators:
 - word_count
 - equivalence
 - relevance_llm
-- relevance_embedding
+- relevance_embed
 ```
 
 | Field              | Description                                                  |
@@ -170,7 +170,7 @@ evaluations:
   values: [0.95, 0.92, 0.98]
   average: 0.95
   standard_deviation: 0.03
-- name: relevance_embedding
+- name: relevance_embed
   values: [0.87, 0.89, 0.85]
   average: 0.87
   standard_deviation: 0.02
@@ -193,7 +193,7 @@ Evaluators score responses on a 0.0-1.0 scale:
 |----------------------|-----------------------------------|--------------------------------------------|
 | `equivalence`        | Semantic similarity to expected   | LLM compares meaning with query output     |
 | `relevance_llm`      | Relevance to the question         | LLM evaluates how relevant the response is to the input question |
-| `relevance_embedding` | Relevance using embeddings        | Cosine similarity of embeddings between question and response |
+| `relevance_embed` | Relevance using embeddings        | Cosine similarity of embeddings between question and response |
 | `word_count`         | Response length validation        | Algorithmic check (no LLM call)            |
 
 ### Word Count Configuration
@@ -280,7 +280,7 @@ eval_chat_model: gpt-4o-mini       # Model for evaluators (cheaper/faster)
 
 ### Embedding Service Configuration
 
-For embedding-based evaluators (like `relevance_embedding`), you can specify a separate embedding service:
+For embedding-based evaluators (like `relevance_embed`), you can specify a separate embedding service:
 
 ```yaml
 chat_service: bedrock
@@ -491,7 +491,7 @@ Default models are configured in `microeval/models.yaml`. You can override them 
 | ollama   | llama3.2                   | nomic-embed-text                       |
 | groq     | llama-3.3-70b-versatile    | (no embeddings - falls back to OpenAI) |
 
-**Note:** Groq doesn't support embeddings, so `relevance_embedding` evaluator will automatically use OpenAI's embedding model when Groq is your chat service.
+**Note:** Groq doesn't support embeddings, so `relevance_embed` evaluator will automatically use OpenAI's embedding model when Groq is your chat service.
 
 ---
 
@@ -506,8 +506,8 @@ Default models are configured in `microeval/models.yaml`. You can override them 
 ### Evaluation Design
 - Use `repeat: 3` or higher to account for model variability
 - Include `equivalence` when you have a known-good answer
-- Use `relevance_llm` or `relevance_embedding` to measure how well responses address the question
-- `relevance_embedding` is faster and cheaper (uses embeddings), while `relevance_llm` provides more nuanced evaluation
+- Use `relevance_llm` or `relevance_embed` to measure how well responses address the question
+- `relevance_embed` is faster and cheaper (uses embeddings), while `relevance_llm` provides more nuanced evaluation
 - Create multiple query files to test different scenarios
 
 ### Eval Service Configuration

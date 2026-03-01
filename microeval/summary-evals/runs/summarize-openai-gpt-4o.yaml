@@ -10,7 +10,7 @@ evaluators:
 - word_count
 - equivalence
 - relevance_llm
-- relevance_embedding
+- relevance_embed
 
 
 

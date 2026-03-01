@@ -16,7 +16,7 @@ chat_models:
   groq:
     - llama-3.3-70b-versatile
 
-# Embedding models for semantic similarity evaluation (relevance_embedding)
+# Embedding models for semantic similarity evaluation (relevance_embed)
 embed_models:
   openai:
     - text-embedding-3-small
