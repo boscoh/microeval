@@ -2,16 +2,16 @@
 texts:
 - |-
   * Collapsing housing markets triggered financial crisis
-  * Institutions failing due to poor risk management
-  * Governments intervening with regulatory reforms
-- |-
-  * Banks issued millions of subprime mortgages to poor credit borrowers.
-  * Investors purchased flawed securities with top AAA ratings worldwide.
-  * Governments intervened with TARP and quantitative easing measures.
+  * Banks failing due to toxic mortgage securities
+  * Governments intervening with massive relief programs
 - |-
   * Collapsing housing markets triggered financial crisis
-  * Banks issuing subprime mortgages fueled instability
-  * Governments intervening with TARP stabilized economies
+  * Institutions failing due to poor risk management
+  * Governments intervening with monetary policies
+- |-
+  * Collapsing housing markets triggered financial crisis
+  * Institutional investors purchased flawed securities blindly
+  * Governments intervened with rescue packages swiftly
 evaluations:
 - name: word_count
   values:
@@ -36,34 +36,34 @@ evaluations:
   standard_deviation: 0.0
 - name: relevance_embedding
   values:
-  - 0.6653077012921786
-  - 0.6966710628354588
-  - 0.7250289807704001
-  average: 0.6956692482993458
-  standard_deviation: 0.02987324103445314
+  - 0.6940918061894014
+  - 0.6557282269549081
+  - 0.6477640497948277
+  average: 0.6658613609797124
+  standard_deviation: 0.024770457343622564
 - name: elapsed_seconds
   values:
-  - 0.5269060134887695
-  - 0.5942962169647217
-  - 0.2947509288787842
-  average: 0.4719843864440918
-  standard_deviation: 0.15714367229242107
+  - 0.28557300567626953
+  - 0.24582910537719727
+  - 0.22850704193115234
+  average: 0.25330305099487305
+  standard_deviation: 0.029257921181480726
 - name: token_count
   values:
+  - 491
   - 490
-  - 500
-  - 492
-  average: 494
-  standard_deviation: 5.291502622129181
+  - 490
+  average: 490.3333333333333
+  standard_deviation: 0.5773502691896257
 - name: cost
   values:
+  - 1.8080900000000001e-07
   - 1.8011e-07
-  - 1.871e-07
-  - 1.8150799999999999e-07
-  average: 1.8290599999999998e-07
-  standard_deviation: 3.6987603328683048e-09
+  - 1.8011e-07
+  average: 1.80343e-07
+  standard_deviation: 4.0356783816356286e-10
 eval:
-  chat_service: openai
-  chat_model: gpt-4o
-  embed_service: openai
-  embed_model: text-embedding-3-small
+  eval_chat_service: openai
+  eval_chat_model: gpt-4o
+  eval_embed_service: openai
+  eval_embed_model: text-embedding-3-small

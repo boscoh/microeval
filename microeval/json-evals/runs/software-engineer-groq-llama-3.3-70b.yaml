@@ -11,4 +11,4 @@ evaluators:
 - relevance_llm
 - relevance_embedding
 eval_chat_service: openai
-eval_model: gpt-4o
+eval_chat_model: gpt-4o

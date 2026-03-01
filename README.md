@@ -36,14 +36,7 @@ ollama serve
 uv run microeval demo1
 ```
 
-This creates a `summary-evals` directory with example evaluations and opens the web UI at http://localhost:8000.
-
-Or try the JSON evaluation demo:
-```bash
-uv run microeval demo2
-```
-
-This creates a `json-evals` directory with structured output evaluations.
+This creates a `summary-evals` directory with example evaluations and opens the web UI at http://localhost:8000. Top-level `*-evals` directories are gitignored so your eval data stays local.
 
 ---
 
@@ -136,9 +129,9 @@ evaluators:
 | `temperature`      | Sampling temperature (0.0 = deterministic)                   |
 | `evaluators`       | List of evaluators to run                                    |
 | `eval_chat_service`| Optional: Different service for evaluators (if not set, uses `chat_service`) |
-| `eval_model`       | Optional: Different model for evaluators (if not set, uses `model`) |
+| `eval_chat_model`  | Optional: Different model for evaluators (if not set, uses `model`) |
 | `eval_embed_service`| Optional: Service for embedding-based evaluators (if not set, uses `chat_service` or falls back to embedding models from `models.yaml`) |
-| `embed_model`      | Optional: Model for embedding-based evaluators (if not set, uses default from `models.yaml`) |
+| `eval_embed_model` | Optional: Model for embedding-based evaluators (if not set, uses default from `models.yaml`) |
 
 ### Step 5: Run the Evaluation
 
@@ -181,8 +174,11 @@ evaluations:
   values: [0.87, 0.89, 0.85]
   average: 0.87
   standard_deviation: 0.02
-eval_chat_service: openai      # Service used for LLM-based evaluators
-eval_embed_service: openai     # Service used for embedding evaluators
+eval:
+  eval_chat_service: openai
+  eval_chat_model: gpt-4o-mini
+  eval_embed_service: openai
+  eval_embed_model: text-embedding-3-small
 ```
 
 Use the **Graph** tab in the Web UI to visualize and compare results across different runs.
@@ -279,7 +275,7 @@ You can use different services/models for running evaluations vs. generating res
 chat_service: bedrock              # Service for generating responses
 model: amazon.nova-pro-v1:0
 eval_chat_service: openai          # Service for LLM-based evaluators (equivalence, relevance_llm)
-eval_model: gpt-4o-mini            # Model for evaluators (cheaper/faster)
+eval_chat_model: gpt-4o-mini       # Model for evaluators (cheaper/faster)
 ```
 
 ### Embedding Service Configuration
@@ -290,11 +286,11 @@ For embedding-based evaluators (like `relevance_embedding`), you can specify a s
 chat_service: bedrock
 model: amazon.nova-pro-v1:0
 eval_embed_service: openai          # Service for embedding-based evaluators
-embed_model: text-embedding-3-small
+eval_embed_model: text-embedding-3-small
 ```
 
 If not specified, the system will:
-1. Use `eval_embed_service`/`embed_model` if set
+1. Use `eval_embed_service`/`eval_embed_model` if set
 2. Check `models.yaml` for embedding models matching your `chat_service` (e.g., `amazon.titan-embed-text-v2:0` for Bedrock)
 3. Fall back to OpenAI's `text-embedding-3-small`
 
@@ -320,16 +316,23 @@ Add eval services directly in each run config:
 chat_service: bedrock
 model: amazon.nova-pro-v1:0
 eval_chat_service: openai          # Override for this run
-eval_model: gpt-4o-mini
+eval_chat_model: gpt-4o-mini
 ```
 
 ### Option 2: Environment Variables (Runtime Override)
 
-Set defaults via environment variables (useful for CI/CD or different environments):
+Eval config keys and env vars are aligned:
+
+| Config key (run YAML / eval.yaml) | Environment variable   |
+|----------------------------------|------------------------|
+| `eval_chat_service`              | `EVAL_CHAT_SERVICE`    |
+| `eval_chat_model`                | `EVAL_CHAT_MODEL`      |
+| `eval_embed_service`             | `EVAL_EMBED_SERVICE`   |
+| `eval_embed_model`               | `EVAL_EMBED_MODEL`     |
 
 ```bash
 export EVAL_CHAT_SERVICE=openai
-export EVAL_MODEL=gpt-4o-mini
+export EVAL_CHAT_MODEL=gpt-4o-mini
 export EVAL_EMBED_SERVICE=openai
 export EVAL_EMBED_MODEL=text-embedding-3-small
 
@@ -344,14 +347,11 @@ Create an `eval.yaml` file at the root of your evaluation directory:
 
 ```yaml
 # Global configuration for all runs
-# Format: eval_llm_service, eval_llm_model, eval_embed_llm_service, eval_embed_llm_model
-eval_llm_service: openai
-eval_llm_model: gpt-4o-mini
-eval_embed_llm_service: openai
-eval_embed_llm_model: text-embedding-3-small
+eval_chat_service: openai
+eval_chat_model: gpt-4o-mini
+eval_embed_service: openai
+eval_embed_model: text-embedding-3-small
 ```
-
-**Note:** The old format (`eval_chat_service`, `eval_model`, `eval_embed_service`, `embed_model`) is still supported for backward compatibility.
 
 This applies to all runs unless overridden by per-run configs or environment variables.
 
@@ -412,7 +412,6 @@ microeval                             # Show help
 microeval ui BASE_DIR                 # Start web UI for evals directory
 microeval run BASE_DIR                # Run all evaluations in directory
 microeval demo1                       # Create summary-evals and launch UI
-microeval demo2                       # Create json-evals and launch UI  
 microeval chat SERVICE                # Interactive chat with LLM provider
 ```
 
@@ -432,14 +431,12 @@ microeval run my-evals                # Run all configs in my-evals/runs/*.yaml
 
 Runs all evaluation configs and saves results to `my-evals/results/`.
 
-### demo1 / demo2 - Quick Start Demos
+### demo1 - Quick Start Demo
 
 ```bash
 microeval demo1                       # Summary evaluation demo
 microeval demo1 --base-dir custom     # Use custom directory name
 microeval demo1 --port 3000           # Use custom port
-
-microeval demo2                       # JSON/structured output demo
 ```
 
 ### chat - Interactive Chat
@@ -473,9 +470,8 @@ microeval chat groq
 │   ├── utils.py                     # YAML helpers
 │   ├── config.py                    # Client configuration
 │   ├── models.yaml                  # Default model definitions
-│   ├── summary-evals/               # Demo 1: summary evaluations
-│   └── json-evals/                  # Demo 2: JSON/structured output
-└── my-evals/                        # Your evaluation project
+│   └── summary-evals/               # Demo template (copied by demo1)
+└── *-evals/                         # Eval dirs at repo root (e.g. my-evals, summary-evals); gitignored via /*-evals/
     ├── prompts/                     # System prompts (.txt files)
     ├── queries/                     # Test cases (.yaml files)
     ├── runs/                        # Run configs (.yaml files)
@@ -518,7 +514,7 @@ Default models are configured in `microeval/models.yaml`. You can override them 
 - Create `eval.yaml` in your eval directory to set default eval services for all runs
 - Use environment variables (`EVAL_CHAT_SERVICE`, etc.) for CI/CD or different environments
 - Per-run configs can override global defaults
-- Results include `eval_chat_service` and `eval_embed_service` to show which services were used
+- Results include `eval_chat_service`, `eval_chat_model`, `eval_embed_service`, and `eval_embed_model` to show which services and models were used
 
 ### Comparing Results
 - Keep one variable constant when comparing (e.g., same prompt, different models)

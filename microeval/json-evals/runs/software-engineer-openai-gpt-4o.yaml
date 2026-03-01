@@ -11,4 +11,4 @@ evaluators:
 - relevance_llm
 - relevance_embedding
 eval_chat_service: null
-eval_model: null
+eval_chat_model: null

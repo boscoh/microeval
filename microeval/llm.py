@@ -30,24 +30,39 @@ import pydash
 
 logger = logging.getLogger(__name__)
 
-# Global semaphore to limit concurrent OpenAI API calls across all parallel runs
-# Prevents hitting rate limits by controlling concurrency
-_OPENAI_MAX_CONCURRENT = int(os.getenv("OPENAI_MAX_CONCURRENT", "5"))
-_openai_semaphore = None
+_OPENAI_RPM = int(os.getenv("OPENAI_RPM", "60"))
+_openai_rate_limiter = None
 
 
-def _get_openai_semaphore() -> asyncio.Semaphore:
-    """Get or create the global OpenAI semaphore.
+class _OpenAIRateLimiter:
+    """Sliding-window rate limiter for OpenAI API: max requests per minute."""
 
-    :return: Semaphore instance limiting concurrent OpenAI API calls
-    """
-    global _openai_semaphore
-    if _openai_semaphore is None:
-        _openai_semaphore = asyncio.Semaphore(_OPENAI_MAX_CONCURRENT)
-        logger.info(
-            f"Initialized OpenAI semaphore with max concurrent={_OPENAI_MAX_CONCURRENT}"
-        )
-    return _openai_semaphore
+    def __init__(self, requests_per_minute: int):
+        self._rpm = max(1, requests_per_minute)
+        self._timestamps: List[float] = []
+        self._lock = asyncio.Lock()
+
+    async def acquire(self) -> None:
+        while True:
+            async with self._lock:
+                now = time.monotonic()
+                window_start = now - 60.0
+                self._timestamps = [t for t in self._timestamps if t > window_start]
+                if len(self._timestamps) < self._rpm:
+                    self._timestamps.append(now)
+                    return
+                wait_duration = self._timestamps[0] + 60.0 - now
+            if wait_duration > 0:
+                await asyncio.sleep(wait_duration)
+
+
+def _get_openai_rate_limiter() -> _OpenAIRateLimiter:
+    """Get or create the global OpenAI rate limiter."""
+    global _openai_rate_limiter
+    if _openai_rate_limiter is None:
+        _openai_rate_limiter = _OpenAIRateLimiter(_OPENAI_RPM)
+        logger.info(f"Initialized OpenAI rate limiter: {_OPENAI_RPM} requests/minute")
+    return _openai_rate_limiter
 
 
 @lru_cache
@@ -695,7 +710,7 @@ class OpenAIClient(SimpleLLMClient):
         max_retries = 5
         base_delay = 1.0
 
-        semaphore = _get_openai_semaphore()
+        rate_limiter = _get_openai_rate_limiter()
 
         for attempt in range(max_retries):
             try:
@@ -704,14 +719,14 @@ class OpenAIClient(SimpleLLMClient):
 
                 formatted_messages = self._transform_messages(messages)
 
-                async with semaphore:
-                    completion = await self.client.chat.completions.create(
-                        model=self.model,
-                        messages=formatted_messages,
-                        tools=tools,
-                        max_tokens=max_tokens,
-                        temperature=temperature,
-                    )
+                await rate_limiter.acquire()
+                completion = await self.client.chat.completions.create(
+                    model=self.model,
+                    messages=formatted_messages,
+                    tools=tools,
+                    max_tokens=max_tokens,
+                    temperature=temperature,
+                )
                 elapsed_seconds = time.time() - start_time
 
                 text = (
@@ -822,17 +837,17 @@ class OpenAIClient(SimpleLLMClient):
         max_retries = 5
         base_delay = 1.0
 
-        semaphore = _get_openai_semaphore()
+        rate_limiter = _get_openai_rate_limiter()
 
         for attempt in range(max_retries):
             try:
                 if not self.client or self._closed:
                     await self.connect()
 
-                async with semaphore:
-                    response = await self.client.embeddings.create(
-                        model=self.model, input=input
-                    )
+                await rate_limiter.acquire()
+                response = await self.client.embeddings.create(
+                    model=self.model, input=input
+                )
                 return response.data[0].embedding
             except openai.RateLimitError as e:
                 if attempt == max_retries - 1:
@@ -1401,6 +1416,4 @@ def get_llm_client(client_type: LLMService, **kwargs) -> SimpleLLMClient:
     if client_type not in LLM_CLIENTS:
         raise ValueError(f"Unknown chat client type: {client_type}")
 
-    model = kwargs.get("model", "default")
-    logger.info(f"Connected '{client_type}':'{model}'")
     return LLM_CLIENTS[client_type](**kwargs)

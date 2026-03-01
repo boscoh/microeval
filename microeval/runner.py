@@ -1,3 +1,4 @@
+import asyncio
 import logging
 from statistics import mean, stdev
 from typing import TYPE_CHECKING, Optional
@@ -56,7 +57,7 @@ class Runner:
         """Get and connect LLM client for LLM-based evaluators."""
         if self._config.eval_chat_service:
             service = self._config.eval_chat_service
-            model = self._config.eval_model
+            model = self._config.eval_chat_model
         else:
             service = self._config.chat_service
             model = self._config.model
@@ -68,7 +69,7 @@ class Runner:
         """Get and connect embedding client for embedding-based evaluators.
 
         Selection priority:
-        1. eval_embed_service/embed_model if specified
+        1. eval_embed_service/eval_embed_model if specified
         2. Default embed model from eval_chat_service or chat_service
         3. Use eval_chat_service or chat_service client if it supports embeddings
         4. Fall back to OpenAI text-embedding-3-small
@@ -76,7 +77,7 @@ class Runner:
         if self._config.eval_embed_service:
             service, model = self._resolve_service_model(
                 self._config.eval_embed_service,
-                self._config.embed_model,
+                self._config.eval_embed_model,
                 "embed_models",
             )
             return await _get_connected_llm_client(service, model)
@@ -110,7 +111,7 @@ class Runner:
             return await _get_connected_llm_client(service, default_embed_model)
 
         if self._config.eval_chat_service and service == self._config.eval_chat_service:
-            model = self._config.eval_model or "default"
+            model = self._config.eval_chat_model or "default"
         else:
             model = self._config.model or "default"
 
@@ -158,9 +159,12 @@ class Runner:
 
             response_texts = []
             run_id = Path(self._config.file_path).stem
-            for i in range(self._config.repeat):
+            n = self._config.repeat
+            for i in range(n):
+                q_svc = self._main_llm_client.service
+                q_model = self._main_llm_client.model or "default"
                 logger.info(
-                    f">>> Evaluate iteration {i + 1}/{self._config.repeat} '{run_id}'"
+                    f"> Eval {i + 1}/{n} '{run_id}' query: '{q_svc}:{q_model}'"
                 )
 
                 response = await self._main_llm_client.get_completion(
@@ -190,6 +194,11 @@ class Runner:
                 eval_results_dict["token_count"].values.append(token_count)
                 eval_results_dict["cost"].values.append(cost_value)
 
+                e_svc = self._eval_llm_client.service
+                e_model = self._eval_llm_client.model or "default"
+                logger.info(
+                    f"> Eval {i + 1}/{n} '{run_id}' eval: '{e_svc}:{e_model}'"
+                )
                 results = await self._evaluation_runner.evaluate_response(response)
                 for evaluator_name, value in results.items():
                     eval_results_dict[evaluator_name].values.append(value["score"])
@@ -208,10 +217,10 @@ class Runner:
                 "texts": response_texts,
                 "evaluations": evaluations,
                 "eval": {
-                    "chat_service": self._eval_llm_client.service,
-                    "chat_model": self._eval_llm_client.model or "default",
-                    "embed_service": self._eval_embed_llm_client.service,
-                    "embed_model": self._eval_embed_llm_client.model or "default",
+                    "eval_chat_service": self._eval_llm_client.service,
+                    "eval_chat_model": self._eval_llm_client.model or "default",
+                    "eval_embed_service": self._eval_embed_llm_client.service,
+                    "eval_embed_model": self._eval_embed_llm_client.model or "default",
                 },
             }
             save_yaml(eval_results, results_path)
@@ -234,20 +243,23 @@ def create_runner(file_path: str) -> Runner:
     return Runner(config)
 
 
-async def run_all(file_paths):
-    """Run all evaluations sequentially.
+async def _run_one(file_path: str) -> None:
+    """Create runner, connect, and run a single evaluation. Raises on failure."""
+    runner = create_runner(file_path)
+    await runner.connect()
+    await runner.run()
 
-    Clients are cached and reused across runs, so they are not closed between runs.
-    They will be cleaned up when the process exits.
+
+async def run_all(file_paths):
+    """Run all evaluations in parallel.
+
+    Each run uses its own Runner. LLM clients are cached by (service, model) so
+    connections are shared. Rate limiting (e.g. OPENAI_RPM) applies across runs.
     """
-    for run_config in file_paths:
-        try:
-            runner = create_runner(run_config)
-            await runner.connect()
-        except Exception as e:
-            logger.error(f"Failed to connect to LLM for '{run_config}': {e}")
-            continue
-        try:
-            await runner.run()
-        except Exception as e:
-            logger.error(f"Job failed: '{run_config}' - {e}")
+    if not file_paths:
+        return
+    tasks = [_run_one(p) for p in file_paths]
+    results = await asyncio.gather(*tasks, return_exceptions=True)
+    for file_path, result in zip(file_paths, results):
+        if isinstance(result, Exception):
+            logger.error(f"Run failed '{file_path}': {result}")

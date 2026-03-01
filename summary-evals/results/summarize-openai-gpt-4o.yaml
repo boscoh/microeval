@@ -1,18 +1,17 @@
 ---
 texts:
-- "- The 2008 financial crisis originated from the collapse of the U.S. housing market\
-  \ and subprime mortgage lending.  \n- Major financial institutions like Bear Stearns\
-  \ and Lehman Brothers collapsed, causing global market panic and economic downturn.\
-  \  \n- Government interventions included TARP, interest rate cuts, and new regulations\
-  \ like the Dodd-Frank Act to prevent future crises.  "
 - |-
-  - The 2008 financial crisis originated from the collapse of the U.S. housing market and risky subprime mortgages.
-  - Lehman Brothers' bankruptcy and AIG's collapse intensified global panic, prompting government intervention with TARP.
-  - The crisis led to severe economic impacts and regulatory reforms like the Dodd-Frank Act to prevent future crises.
+  - The 2008 financial crisis originated from subprime mortgages and complex securities like collateralized debt obligations (CDOs).
+  - The crisis escalated with Lehman Brothers' bankruptcy and AIG's near-collapse, causing global market panic.
+  - Government interventions included TARP and Dodd-Frank Act, aiming to stabilize banks and reform financial regulations.
 - |-
-  - The 2008 financial crisis originated from subprime mortgages bundled into CDOs, misleadingly rated AAA by credit agencies.
-  - Global panic ensued as mortgage defaults surged, leading to Lehman Brothers' bankruptcy and AIG's near-collapse.
-  - The U.S. government responded with TARP and monetary policies, while the Dodd-Frank Act reformed financial regulation.
+  - The 2008 financial crisis originated from the collapse of the U.S. housing market and subprime mortgage defaults.
+  - Lehman Brothers' bankruptcy and AIG's struggles intensified global panic, despite government intervention with TARP.
+  - The crisis led to significant regulatory changes, including the Dodd-Frank Act, reshaping financial oversight.
+- |-
+  - The 2008 financial crisis began with subprime mortgage defaults, collapsing the U.S. housing market and affecting global investors.
+  - Lehman Brothers' bankruptcy and AIG's collapse in 2008 triggered panic, prompting U.S. government intervention.
+  - The Dodd-Frank Act of 2010 reformed financial regulation, introducing new oversight and consumer protection measures.
 evaluations:
 - name: word_count
   values:
@@ -37,34 +36,34 @@ evaluations:
   standard_deviation: 0.0
 - name: relevance_embedding
   values:
-  - 0.8403659234011805
-  - 0.8268720881172088
-  - 0.8481347957740579
-  average: 0.8384576024308158
-  standard_deviation: 0.01075904042745486
+  - 0.8198018934256933
+  - 0.8293727540509201
+  - 0.8491377910862681
+  average: 0.8327708128542939
+  standard_deviation: 0.014960241495755276
 - name: elapsed_seconds
   values:
-  - 1.3457179069519043
-  - 1.4084880352020264
-  - 1.4024782180786133
-  average: 1.3855613867441814
-  standard_deviation: 0.03463605977781548
+  - 1.4329168796539307
+  - 1.2282049655914307
+  - 1.5631449222564697
+  average: 1.4080889225006104
+  standard_deviation: 0.1688446452659956
 - name: token_count
   values:
-  - 515
   - 509
-  - 516
-  average: 513.3333333333334
+  - 508
+  - 515
+  average: 510.6666666666667
   standard_deviation: 3.7859388972001824
 - name: cost
   values:
-  - 2.7749999999999997e-06
   - 2.6849999999999997e-06
-  - 2.7900000000000004e-06
-  average: 2.75e-06
-  standard_deviation: 5.678908345800297e-08
+  - 2.67e-06
+  - 2.7749999999999997e-06
+  average: 2.71e-06
+  standard_deviation: 5.6789083458002675e-08
 eval:
-  chat_service: openai
-  chat_model: gpt-4o
-  embed_service: openai
-  embed_model: text-embedding-3-small
+  eval_chat_service: openai
+  eval_chat_model: gpt-4o
+  eval_embed_service: openai
+  eval_embed_model: text-embedding-3-small

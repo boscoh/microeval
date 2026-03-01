@@ -169,6 +169,7 @@ $RECYCLE.BIN/
 *.local
 
 # Project specific
+/*-evals/
 *.db
 *.sqlite3
 *.log

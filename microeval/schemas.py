@@ -102,10 +102,8 @@ class RunConfig(BaseModel):
     """Configuration for a single evaluation run.
     
     Supports eval.yaml global config with field names:
-    - chat_service / chat_model (for LLM-based evaluators)
-    - embed_service / embed_model (for embedding-based evaluators)
-    
-    These map to internal fields: eval_chat_service, eval_model, eval_embed_service, embed_model
+    - eval_chat_service / eval_chat_model (for LLM-based evaluators)
+    - eval_embed_service / eval_embed_model (for embedding-based evaluators)
     """
 
     file_path: Optional[str] = None
@@ -122,23 +120,17 @@ class RunConfig(BaseModel):
         default_factory=lambda: ["equivalence"]
     )
     eval_chat_service: Optional[LLMService] = None
-    eval_model: Optional[str] = None
+    eval_chat_model: Optional[str] = None
     eval_embed_service: Optional[LLMService] = None
-    embed_model: Optional[str] = None
+    eval_embed_model: Optional[str] = None
 
     @staticmethod
     def read_from_yaml(file_path: str) -> "RunConfig":
         """Load RunConfig from YAML file with support for eval.yaml global config.
 
-        The eval.yaml file uses the following format:
-
-        .. code-block:: yaml
-
-            # Global configuration for all runs
-            chat_service: openai
-            chat_model: gpt-4o-mini
-            embed_service: openai
-            embed_model: text-embedding-3-small
+        The eval.yaml file uses: eval_chat_service, eval_chat_model,
+        eval_embed_service, eval_embed_model. Env vars EVAL_CHAT_SERVICE,
+        EVAL_CHAT_MODEL, EVAL_EMBED_SERVICE, EVAL_EMBED_MODEL override.
         """
         data = load_yaml(file_path)
 
@@ -153,37 +145,19 @@ class RunConfig(BaseModel):
                     f"Failed to load global config from '{global_config_path}': {e}"
                 )
 
-        # Map eval.yaml format to internal field names
-        # eval.yaml uses: chat_service, chat_model, embed_service, embed_model (matches eval results structure)
-        field_mapping = {
-            "chat_service": "eval_chat_service",
-            "chat_model": "eval_model",
-            "embed_service": "eval_embed_service",
-            "embed_model": "embed_model",
-        }
-
-        # Apply field mapping only to global_config (eval.yaml)
-        items_to_move = [
-            (new_key, internal_key)
-            for new_key, internal_key in field_mapping.items()
-            if new_key in global_config
-        ]
-        for new_key, internal_key in items_to_move:
-            global_config[internal_key] = global_config[new_key]
-            del global_config[new_key]
-
+        eval_keys = (
+            "eval_chat_service",
+            "eval_chat_model",
+            "eval_embed_service",
+            "eval_embed_model",
+        )
         env_key_mapping = {
             "eval_chat_service": "EVAL_CHAT_SERVICE",
-            "eval_model": "EVAL_MODEL",
+            "eval_chat_model": "EVAL_CHAT_MODEL",
             "eval_embed_service": "EVAL_EMBED_SERVICE",
-            "embed_model": "EVAL_EMBED_MODEL",
+            "eval_embed_model": "EVAL_EMBED_MODEL",
         }
-        for key in [
-            "eval_chat_service",
-            "eval_model",
-            "eval_embed_service",
-            "embed_model",
-        ]:
+        for key in eval_keys:
             env_key = env_key_mapping[key]
             if env_key in os.environ:
                 data[key] = os.environ[env_key]
