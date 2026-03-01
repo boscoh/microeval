@@ -2,14 +2,15 @@
 file_path: null
 query_ref: financial_crisis_2008
 prompt_ref: bullet_points
-service: openai
+chat_service: openai
 model: gpt-4o
 repeat: 3
 temperature: 0.5
 evaluators:
 - word_count
 - equivalence
-- relevance
+- relevance_llm
+- relevance_embedding
 
 
 

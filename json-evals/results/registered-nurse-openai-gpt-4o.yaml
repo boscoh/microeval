@@ -1,0 +1,102 @@
+---
+texts:
+- |-
+  ```json
+  [
+    "Patient Assessment",
+    "Medication Administration",
+    "IV Insertion",
+    "Wound Care",
+    "Telemetry Monitoring",
+    "Electronic Health Records",
+    "Patient Education",
+    "Infection Control",
+    "Hemodynamic Monitoring",
+    "Ventilator Management",
+    "Registered Nurse",
+    "Basic Life Support",
+    "Advanced Cardiovascular Life Support"
+  ]
+  ```
+- |-
+  ```json
+  [
+    "Patient Assessment",
+    "Medication Administration",
+    "IV Insertion",
+    "Wound Care",
+    "Telemetry Monitoring",
+    "Electronic Health Records",
+    "Patient Education",
+    "Infection Control",
+    "Hemodynamic Monitoring",
+    "Ventilator Management",
+    "Registered Nurse",
+    "Basic Life Support",
+    "Advanced Cardiovascular Life Support"
+  ]
+  ```
+- |-
+  ```json
+  [
+    "Patient Assessment",
+    "Medication Administration",
+    "IV Insertion",
+    "Wound Care",
+    "Telemetry Monitoring",
+    "Electronic Health Records",
+    "Patient Education",
+    "Infection Control",
+    "Hemodynamic Monitoring",
+    "Ventilator Management",
+    "Registered Nurse",
+    "Basic Life Support",
+    "Advanced Cardiovascular Life Support"
+  ]
+  ```
+evaluations:
+- name: equivalence
+  values:
+  - 0.5
+  - 1.0
+  - 0.5
+  average: 0.6666666666666666
+  standard_deviation: 0.28867513459481287
+- name: relevance_llm
+  values:
+  - 1.0
+  - 0.75
+  - 1.0
+  average: 0.9166666666666666
+  standard_deviation: 0.14433756729740643
+- name: relevance_embedding
+  values:
+  - 0.4207217366767498
+  - 0.4207217366767498
+  - 0.42070114760633964
+  average: 0.42071487365327975
+  standard_deviation: 1.1887105343657025e-05
+- name: elapsed_seconds
+  values:
+  - 0.8368058204650879
+  - 1.3340039253234863
+  - 0.7976980209350586
+  average: 0.9895025889078776
+  standard_deviation: 0.2989870115742916
+- name: token_count
+  values:
+  - 569
+  - 569
+  - 569
+  average: 569
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 3.0449999999999996e-06
+  - 3.0449999999999996e-06
+  - 3.0449999999999996e-06
+  average: 3.0449999999999996e-06
+  standard_deviation: 0.0
+eval:
+  chat_service: openai
+  embed_service: openai

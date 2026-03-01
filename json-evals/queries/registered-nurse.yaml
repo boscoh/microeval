@@ -1,0 +1,49 @@
+---
+input: |
+  # REGISTERED NURSE — ICU
+
+  Registered Nurse with 6 years of critical care experience in Level I Trauma
+  Center ICU settings. BLS and ACLS certified. Skilled in managing complex,
+  high-acuity patients with expertise in hemodynamic monitoring and ventilator
+  management.
+
+  ## Work Experience
+
+  ### ICU Staff Nurse, UCSF Medical Center (2020–Present)
+  - Managed care for 2–4 critically ill patients per shift including post-operative
+    cardiac and neurological cases
+  - Performed patient assessment, medication administration, and IV insertion daily
+  - Operated and interpreted telemetry monitoring and arterial line readings
+  - Provided wound care including dressing changes and negative pressure wound therapy
+  - Maintained accurate documentation using Epic Electronic Health Records
+  - Educated patients and families on discharge instructions and medication adherence
+
+  ### Staff Nurse, Sutter Health (2018–2020)
+  - Delivered direct nursing care in a 24-bed general ICU
+  - Assisted with infection control protocols and isolation procedures
+  - Participated in rapid response team activations
+
+  ## Certifications
+  - Registered Nurse (RN), California Board of Registered Nursing
+  - Basic Life Support (BLS), American Heart Association
+  - Advanced Cardiovascular Life Support (ACLS), American Heart Association
+
+  ## Skills
+  Patient Assessment, Medication Administration, IV Insertion, Wound Care,
+  Telemetry Monitoring, Electronic Health Records, Patient Education,
+  Infection Control, Hemodynamic Monitoring, Ventilator Management
+output: |
+  [
+    "Patient Assessment",
+    "Medication Administration",
+    "IV Insertion",
+    "Wound Care",
+    "Telemetry Monitoring",
+    "Electronic Health Records",
+    "Patient Education",
+    "Infection Control",
+    "Hemodynamic Monitoring",
+    "Ventilator Management",
+    "BLS",
+    "ACLS"
+  ]

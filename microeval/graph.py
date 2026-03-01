@@ -3,6 +3,7 @@
 import logging
 from typing import Dict, List
 
+import pydash
 from path import Path
 
 from microeval.utils import load_yaml
@@ -23,7 +24,32 @@ def parse_service_model_from_basename(basename: str) -> tuple[str, str]:
 
 
 def extract_evaluation_data(results_dir: Path) -> Dict[str, List[Dict]]:
-    """Extract all evaluation metrics from result files, organized by evaluator type."""
+    """Extract all evaluation metrics from result files, organized by evaluator type.
+
+    :param results_dir: Directory containing result YAML files.
+    :return: Dictionary mapping evaluator names to lists of evaluation data. Example::
+
+            {
+              "equivalence": [
+                {
+                  "basename": "summarize-gpt4o",
+                  "service": "openai",
+                  "model": "gpt-4o",
+                  "average": 0.95,
+                  "standardDeviation": 0.03
+                }
+              ],
+              "relevance_llm": [
+                {
+                  "basename": "summarize-gpt4o",
+                  "service": "openai",
+                  "model": "gpt-4o",
+                  "average": 0.92,
+                  "standardDeviation": 0.05
+                }
+              ]
+            }
+    """
     evaluators_data = {}
 
     for result_file in results_dir.glob("*.yaml"):
@@ -32,9 +58,9 @@ def extract_evaluation_data(results_dir: Path) -> Dict[str, List[Dict]]:
             basename = result_file.stem
             service, model = parse_service_model_from_basename(basename)
 
-            for evaluation in data.get("evaluations", []):
-                eval_name = evaluation.get("name")
-                average = evaluation.get("average")
+            for evaluation in pydash.get(data, "evaluations", []):
+                eval_name = pydash.get(evaluation, "name")
+                average = pydash.get(evaluation, "average")
 
                 if eval_name and average is not None:
                     if eval_name not in evaluators_data:
@@ -46,9 +72,7 @@ def extract_evaluation_data(results_dir: Path) -> Dict[str, List[Dict]]:
                             "service": service,
                             "model": model,
                             "average": average,
-                            "standardDeviation": evaluation.get(
-                                "standard_deviation", 0.0
-                            ),
+                            "standardDeviation": pydash.get(evaluation, "standard_deviation", 0.0),
                         }
                     )
         except Exception as e:
@@ -84,7 +108,37 @@ def get_color_for_basename(basename: str) -> str:
 def generate_plotly_graph(
     performance_data: List[Dict], graph_id: str, x_axis_label: str
 ) -> Dict:
-    """Generate Plotly graph configuration from performance data."""
+    """Generate Plotly graph configuration from performance data.
+
+    :param performance_data: List of performance data dictionaries. Example::
+
+            [
+              {
+                "basename": "summarize-gpt4o",
+                "average": 0.95,
+                "standardDeviation": 0.03
+              }
+            ]
+
+    :param graph_id: Unique identifier for the graph (e.g., "equivalence-graph").
+    :param x_axis_label: Label for the x-axis (e.g., "Equivalence Score").
+    :return: Plotly graph configuration dictionary. Example::
+
+            {
+              "id": "equivalence-graph",
+              "data": [{
+                "y": ["summarize-gpt4o"],
+                "x": [0.95],
+                "error_x": {"array": [0.03], "visible": true},
+                "type": "bar",
+                "orientation": "h"
+              }],
+              "layout": {
+                "xaxis": {"title": {"text": "Equivalence Score"}},
+                "height": 200
+              }
+            }
+    """
     y_labels = [d["basename"] for d in performance_data]
     x_values = [d["average"] for d in performance_data]
     error_values = [d["standardDeviation"] for d in performance_data]

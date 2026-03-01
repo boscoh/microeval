@@ -1,7 +1,6 @@
 """CLI for microeval LLM evaluation framework."""
 
 import asyncio
-import json
 import logging
 import shutil
 import threading
@@ -12,7 +11,7 @@ from path import Path
 
 from microeval import __version__
 from microeval.chat import main as chat_main
-from microeval.llm import LLMService, load_config
+from microeval.llm import LLMService, load_selectable_models
 from microeval.logger import setup_logging
 from microeval.runner import run_all
 from microeval.schemas import evals_dir
@@ -109,11 +108,11 @@ def _run_demo(template_name: str, base_dir: str, port: int):
         shutil.copytree(str(template_path), str(demo_dir))
 
         # Copy the LLM models config (chat_models and embed_models) to the demo directory
-        llm_config = load_config()
-        config_path = demo_dir / "models.json"
-        with open(config_path, "w") as f:
-            json.dump(llm_config, f, indent=2)
-        logger.info(f"Created models.json in {base_dir}")
+        from microeval.utils import save_yaml
+        llm_config = load_selectable_models()
+        config_path = demo_dir / "models.yaml"
+        save_yaml(llm_config, str(config_path))
+        logger.info(f"Created models.yaml in {base_dir}")
 
     evals_dir.set_base(base_dir)
 

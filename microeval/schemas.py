@@ -13,6 +13,18 @@ logger = logging.getLogger(__name__)
 
 
 class EvaluatorConfig(BaseModel):
+    """Configuration for an evaluator with optional parameters.
+
+    Example::
+
+        {
+          "name": "word_count",
+          "params": {
+            "min_words": 50,
+            "max_words": 200
+          }
+        }
+    """
     name: str
     params: Dict[str, Any] = Field(default_factory=dict)
 
@@ -82,19 +94,54 @@ class RunConfig(BaseModel):
     prompt: str = ""
     input: str = ""
     output: str = ""
-    service: LLMService
+    chat_service: LLMService
     model: str = ""
     repeat: int = 1
     temperature: float = 0.0
     evaluators: List[Union[str, EvaluatorConfig, Dict[str, Any]]] = Field(
         default_factory=lambda: ["coherence"]
     )
-    eval_service: Optional[LLMService] = None
+    eval_chat_service: Optional[LLMService] = None
     eval_model: Optional[str] = None
+    eval_embed_service: Optional[LLMService] = None
+    embed_model: Optional[str] = None
 
     @staticmethod
     def read_from_yaml(file_path: str) -> "RunConfig":
         data = load_yaml(file_path)
+        
+        global_config = {}
+        global_config_path = evals_dir._base / "eval.yaml"
+        if global_config_path.exists():
+            try:
+                global_config = load_yaml(str(global_config_path))
+                logger.info(f"Loaded global config from '{global_config_path}'")
+            except Exception as e:
+                logger.warning(f"Failed to load global config from '{global_config_path}': {e}")
+        
+        env_key_mapping = {
+            "eval_chat_service": "EVAL_CHAT_SERVICE",
+            "eval_model": "EVAL_MODEL",
+            "eval_embed_service": "EVAL_EMBED_SERVICE",
+            "embed_model": "EVAL_EMBED_MODEL",
+        }
+        for key in ["eval_chat_service", "eval_model", "eval_embed_service", "embed_model"]:
+            env_key = env_key_mapping[key]
+            if env_key in os.environ:
+                data[key] = os.environ[env_key]
+            elif (key not in data or data.get(key) is None) and key in global_config:
+                data[key] = global_config[key]
+        
+        if "service" in data and "chat_service" not in data:
+            data["chat_service"] = data.pop("service")
+        if "eval_service" in data and "eval_chat_service" not in data:
+            data["eval_chat_service"] = data.pop("eval_service")
+        if "evalService" in data and "eval_chat_service" not in data:
+            data["eval_chat_service"] = data.pop("evalService")
+        if "embed_service" in data and "eval_embed_service" not in data:
+            data["eval_embed_service"] = data.pop("embed_service")
+        if "evalModel" in data and "eval_model" not in data:
+            data["eval_model"] = data.pop("evalModel")
         result = RunConfig(**data)
         result.file_path = file_path
         logger.info(f"Loaded run config from '{file_path}'")
@@ -127,6 +174,16 @@ class RunConfig(BaseModel):
         del save_config["input"]
         del save_config["output"]
         del save_config["prompt"]
+        if "service" in save_config:
+            save_config["chat_service"] = save_config.pop("service")
+        if "eval_service" in save_config:
+            save_config["eval_chat_service"] = save_config.pop("eval_service")
+        if "embed_service" in save_config:
+            save_config["eval_embed_service"] = save_config.pop("embed_service")
+        
+        # Remove None values so defaults can be resolved when reading back
+        save_config = {k: v for k, v in save_config.items() if v is not None}
+        
         save_yaml(save_config, file_path)
         logger.info(f"Saved test config to '{file_path}'")
 

@@ -2,12 +2,13 @@
 file_path: null
 query_ref: registered-nurse
 prompt_ref: candidate-skills
-service: bedrock
+chat_service: bedrock
 model: amazon.nova-pro-v1:0
 repeat: 3
 temperature: 0.0
 evaluators:
 - equivalence
-- relevance
-eval_service: openai
+- relevance_llm
+- relevance_embedding
+eval_chat_service: openai
 eval_model: gpt-4o

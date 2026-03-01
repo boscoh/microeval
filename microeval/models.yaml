@@ -1,0 +1,75 @@
+# Model configuration for microeval
+# Defines available chat models, embedding models, and pricing for each service
+
+# Chat models available for generating responses
+chat_models:
+  bedrock:
+    - amazon.nova-pro-v1:0
+  openai:
+    - gpt-4o
+    - gpt-4o-mini
+    - gpt-4-turbo
+    - gpt-4
+    - gpt-3.5-turbo
+  ollama:
+    - llama3.2
+  groq:
+    - llama-3.3-70b-versatile
+
+# Embedding models for semantic similarity evaluation (relevance_embedding)
+embed_models:
+  openai:
+    - text-embedding-3-small
+    - text-embedding-3-large
+    - text-embedding-ada-002
+  ollama:
+    - nomic-embed-text
+    - mxbai-embed-large
+    - all-minilm
+  bedrock:
+    - amazon.titan-embed-text-v2:0
+    - amazon.titan-embed-text-v1
+    - cohere.embed-english-v3
+    - cohere.embed-multilingual-v3
+
+# Pricing in USD per million tokens (used for cost calculation)
+pricing:
+  openai:
+    gpt-4o:
+      prompt: 0.00375
+      completion: 0.015
+    gpt-4o-mini:
+      prompt: 0.00015
+      completion: 0.0006
+    gpt-4-turbo:
+      prompt: 0.01
+      completion: 0.03
+    gpt-4:
+      prompt: 0.03
+      completion: 0.06
+    gpt-3.5-turbo:
+      prompt: 0.0005
+      completion: 0.0015
+  groq:
+    llama-3.3-70b-versatile:
+      prompt: 0.000349
+      completion: 0.000699
+    llama-3.1-8b-instant:
+      prompt: 0.000025
+      completion: 0.00005
+  bedrock:
+    claude-opus-4-6:
+      prompt: 0.0228
+      completion: 0.1216
+    claude-sonnet-4-5:
+      prompt: 0.00456
+      completion: 0.0228
+    claude-haiku-4-5:
+      prompt: 0.00120
+      completion: 0.00600
+    claude-3-7-sonnet:
+      prompt: 0.00456
+      completion: 0.0228
+    amazon.nova-pro-v1:0:
+      prompt: 0.0012
+      completion: 0.0048

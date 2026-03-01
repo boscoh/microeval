@@ -1,0 +1,84 @@
+---
+texts:
+- |-
+  [
+    "Hemodynamic Monitoring",
+    "Ventilator Management",
+    "IV Insertion",
+    "Medication Administration",
+    "Wound Care",
+    "Patient Education",
+    "Telemetry Monitoring",
+    "Electronic Health Records",
+    "Infection Control"
+  ]
+- |-
+  [
+    "Hemodynamic Monitoring",
+    "Ventilator Management",
+    "IV Insertion",
+    "Medication Administration",
+    "Wound Care",
+    "Patient Education",
+    "Telemetry Monitoring",
+    "Electronic Health Records",
+    "Infection Control"
+  ]
+- |-
+  [
+    "Hemodynamic Monitoring",
+    "Ventilator Management",
+    "IV Insertion",
+    "Medication Administration",
+    "Wound Care",
+    "Patient Education",
+    "Telemetry Monitoring",
+    "Electronic Health Records",
+    "Infection Control"
+  ]
+evaluations:
+- name: equivalence
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: relevance_llm
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.4950195339553362
+  - 0.4950195339553362
+  - 0.4950195339553362
+  average: 0.4950195339553362
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 7.700392246246338
+  - 3.601522922515869
+  - 8.677726984024048
+  average: 6.659880717595418
+  standard_deviation: 2.6933176751842027
+- name: token_count
+  values:
+  - 359
+  - 359
+  - 359
+  average: 359
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 0.0
+  - 0.0
+  - 0.0
+  average: 0.0
+  standard_deviation: 0.0
+eval:
+  chat_service: openai
+  embed_service: openai

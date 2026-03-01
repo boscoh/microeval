@@ -1,0 +1,9 @@
+---
+query_ref: engineer
+prompt_ref: candidate-skills
+chat_service: bedrock
+model: amazon.nova-pro-v1:0
+repeat: 3
+temperature: 0.0
+evaluators:
+- equivalence

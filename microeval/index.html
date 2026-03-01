@@ -214,7 +214,7 @@
                     .mt-4.d-flex.flex-wrap.align-items-start.gap-3
                       .d-flex.align-items-center.gap-2
                         label.form-label.mb-0.fw-bold Service
-                        select.form-select(v-model="runConfig.service")
+                        select.form-select(v-model="runConfig.chatService")
                           option(value="" disabled)
                             | Select a service
                           option(v-for="(models, serviceName) in defaults.models" :key="serviceName" :value="serviceName")
@@ -310,6 +310,15 @@
 
                     .mt-4
                     template(v-if="runResult && runResult.length")
+                      template(v-if="runResultMetadata && (runResultMetadata.evalChatService || runResultMetadata.evalEmbedService)")
+                        .mb-3
+                          small.text-muted
+                            template(v-if="runResultMetadata.evalChatService")
+                              | Eval Service: {{ runResultMetadata.evalChatService }}
+                            template(v-if="runResultMetadata.evalChatService && runResultMetadata.evalEmbedService")
+                              | &nbsp;|&nbsp;
+                            template(v-if="runResultMetadata.evalEmbedService")
+                              | Embed Service: {{ runResultMetadata.evalEmbedService }}
                       .table-responsive
                         table.table.table-striped
                           thead
@@ -580,13 +589,17 @@
 
       const runNames = ref([]);
       const runConfig = ref({});
-      const runResult = ref({});
+      const runResult = ref([]);
+      const runResultMetadata = ref({});
       const selectedRunName = ref("");
       const newRunName = ref("");
       const isEvaluatingByRun = ref({});
       const isRunningAll = ref(false);
       const isSavingRunConfig = ref(false);
       const isLoadingRun = ref(false);
+      const isSwitchingRun = ref(false);
+      let stopWatcher = null;
+      let watcherActive = true;
       const isLoadingPrompt = ref(false);
       const isLoadingQuery = ref(false);
 
@@ -660,7 +673,7 @@
 
       // Derived values
       const filteredModels = computed(() => {
-        const svc = _.get(runConfig, "value.service");
+        const svc = _.get(runConfig, "value.chatService") || _.get(runConfig, "value.chat_service");
         const modelsMap = _.get(defaults, "value.models", {}) || {};
         return svc && modelsMap[svc] ? modelsMap[svc] : [];
       });
@@ -671,7 +684,7 @@
 
       // Keep model consistent with selected service
       watch(
-        () => _.get(runConfig, "value.service"),
+        () => _.get(runConfig, "value.chatService") || _.get(runConfig, "value.chat_service"),
         () => {
           const current = _.get(runConfig, "value.model");
           if (!filteredModels.value.includes(current)) {
@@ -758,14 +771,31 @@
       }
 
       async function chooseRun(runName) {
+        isSwitchingRun.value = true;
+        debouncedAutoSave.cancel();
+        if (stopWatcher && watcherActive) {
+          stopWatcher();
+          watcherActive = false;
+        }
         selectedRunName.value = runName;
         selectedPrompt.value = "";
-        await loadRunConfig(runName);
-        await loadRunResult(runName);
+        try {
+          await loadRunConfig(runName);
+          await loadRunResult(runName);
+        } finally {
+          setTimeout(() => {
+            isSwitchingRun.value = false;
+            if (!watcherActive) {
+              stopWatcher = watch(runConfig, debouncedAutoSave, { deep: true });
+              watcherActive = true;
+            }
+          }, 1000);
+        }
       }
 
       async function loadRunConfig(runName) {
         isLoadingRun.value = true;
+        debouncedAutoSave.cancel();
         try {
           runConfig.value = await fetchObject("run", runName);
           await choosePromptOfRun(runConfig.value.promptRef);
@@ -806,11 +836,16 @@
       }
 
       async function loadRunResult(runName) {
-        runResult.value = {};
+        runResult.value = [];
+        runResultMetadata.value = {};
         sampleOutput.value = [];
         try {
           const content = await fetchObject("result", runName);
           runResult.value = content.evaluations || [];
+          runResultMetadata.value = {
+            evalChatService: content.eval?.chat_service || content.eval_chat_service,
+            evalEmbedService: content.eval?.embed_service || content.eval_embed_service,
+          };
           const responseTexts = content.texts || [];
           sampleOutput.value = Array.isArray(responseTexts) ? responseTexts : [];
         } catch (error) {
@@ -903,10 +938,11 @@
       }
 
       const debouncedAutoSave = _.debounce(async () => {
-        if (!selectedRunName.value || isLoadingRun.value) return;
+        if (!selectedRunName.value || isLoadingRun.value || isSwitchingRun.value) return;
+        const currentRunName = selectedRunName.value;
         runSaving.start();
         try {
-          await saveObject("run", selectedRunName.value, runConfig.value);
+          await saveObject("run", currentRunName, runConfig.value);
           if (runConfig.value.promptRef && runConfig.value.prompt !== undefined) {
             await saveObject("prompt", runConfig.value.promptRef, runConfig.value.prompt);
           }
@@ -920,11 +956,13 @@
           console.error("Auto-save failed:", error);
           showNotification("Auto-save failed", "danger");
         } finally {
-          runSaving.end();
+          if (selectedRunName.value === currentRunName && !isSwitchingRun.value) {
+            runSaving.end();
+          }
         }
       }, 600);
 
-      watch(runConfig, debouncedAutoSave, { deep: true });
+      stopWatcher = watch(runConfig, debouncedAutoSave, { deep: true });
 
       async function createRun(name) {
         if (!name) return;

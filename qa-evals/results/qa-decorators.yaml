@@ -1,0 +1,101 @@
+---
+texts:
+- |-
+  `@staticmethod` and `@classmethod` are both used to define methods in a class, but they differ in their behavior and usage:
+
+  - `@staticmethod`: A static method belongs to a class rather than an instance of the class. It doesn't have access to the class or instance, and it can't modify the class state. It's essentially a function that's namespaced within the class.
+
+  - `@classmethod`: A class method is bound to the class and has access to the class. It receives the class as an implicit first argument, just like an instance method receives the instance. Class methods are often used as alternative constructors or to implement singleton patterns.
+- |-
+  `@staticmethod` is a method that belongs to a class, rather than an instance of the class. It doesn't have access to the class or instance, and is essentially a function that happens to be defined inside a class.
+
+  `@classmethod` is a method that is bound to the class, rather than an instance of the class. It has access to the class, but not to any instance of the class. The first parameter to a `@classmethod` is always the class itself, referred to as `cls` by convention.
+
+  Example:
+  ```python
+  class MyClass:
+      @staticmethod
+      def static_method():
+          return "Static method"
+
+      @classmethod
+      def class_method(cls):
+          return f"Class method of {cls.__name__}"
+
+      def instance_method(self):
+          return "Instance method"
+
+  print(MyClass.static_method())  # Outputs: Static method
+  print(MyClass.class_method())  # Outputs: Class method of MyClass
+  obj = MyClass()
+  print(obj.instance_method())  # Outputs: Instance method
+  ```
+- |-
+  `@staticmethod` is a method that belongs to a class, rather than an instance of the class. It doesn't have access to the class or instance, and is essentially a function that happens to be defined inside a class.
+
+  `@classmethod` is a method that is bound to the class, rather than an instance of the class. It has access to the class, but not to any instance of the class. The first parameter to a `@classmethod` is always the class itself, referred to as `cls` by convention.
+
+  Example:
+  ```python
+  class MyClass:
+      @staticmethod
+      def static_method():
+          return "Static method"
+
+      @classmethod
+      def class_method(cls):
+          return f"Class method of {cls.__name__}"
+
+      def instance_method(self):
+          return "Instance method"
+
+  print(MyClass.static_method())  # Outputs: Static method
+  print(MyClass.class_method())  # Outputs: Class method of MyClass
+  print(MyClass().instance_method())  # Outputs: Instance method
+  ```
+evaluations:
+- name: equivalence
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_llm
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.8261813204405114
+  - 0.8126428359793152
+  - 0.8150029933219238
+  average: 0.8179423832472501
+  standard_deviation: 0.007232057122724154
+- name: elapsed_seconds
+  values:
+  - 0.5186679363250732
+  - 0.5638949871063232
+  - 0.5446538925170898
+  average: 0.5424056053161621
+  standard_deviation: 0.02269719425602718
+- name: token_count
+  values:
+  - 254
+  - 331
+  - 329
+  average: 304.6666666666667
+  standard_deviation: 43.89001405027496
+- name: cost
+  values:
+  - 1.35896e-07
+  - 1.89719e-07
+  - 1.88321e-07
+  average: 1.71312e-07
+  standard_deviation: 3.067911982114221e-08
+eval:
+  chat_service: openai
+  embed_service: openai

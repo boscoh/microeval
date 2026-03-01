@@ -1,0 +1,12 @@
+---
+query_ref: financial_crisis_2008
+prompt_ref: bullet_points
+chat_service: groq
+model: llama-3.3-70b-versatile
+repeat: 3
+temperature: 0.5
+evaluators:
+- word_count
+- equivalence
+- relevance_llm
+- relevance_embedding

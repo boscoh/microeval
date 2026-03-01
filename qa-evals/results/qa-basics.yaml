@@ -1,0 +1,60 @@
+---
+texts:
+- >-
+  `is` checks for object identity, while `==` checks for object equality. `is` returns
+  True if both variables point to the same object in memory, whereas `==` returns
+  True if the values of the objects are equal, even if they are different objects.
+- >-
+  `is` checks for object identity, while `==` checks for object equality. `is` returns
+  True if both variables point to the same object in memory, whereas `==` returns
+  True if the values of the objects are equal, even if they are different objects.
+- >-
+  `is` checks for object identity, while `==` checks for object equality. `is` returns
+  True if both variables point to the same object in memory, whereas `==` returns
+  True if the values of the objects are equal, even if they are different objects.
+evaluations:
+- name: equivalence
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_llm
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.6746485619083209
+  - 0.6746485619083209
+  - 0.6746485619083209
+  average: 0.6746485619083209
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 0.2787468433380127
+  - 0.2586948871612549
+  - 0.22665905952453613
+  average: 0.2547002633412679
+  standard_deviation: 0.02627264871015622
+- name: token_count
+  values:
+  - 173
+  - 173
+  - 173
+  average: 173
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 7.9977e-08
+  - 7.9977e-08
+  - 7.9977e-08
+  average: 7.9977e-08
+  standard_deviation: 0.0
+eval:
+  chat_service: openai
+  embed_service: openai

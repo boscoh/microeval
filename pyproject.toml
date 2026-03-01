@@ -37,6 +37,7 @@ dependencies = [
     "groq>=0.14.0",
     "cyclopts>=0.6.0",
     "ty>=0.0.4",
+    "pydash>=7.0.0",
 ]
 
 [project.scripts]

@@ -1,0 +1,113 @@
+---
+input: |
+  # SENIOR ENGINEERING MANAGER
+
+  Personable, patient and adaptable Math tutor with 3 years of experience
+  tutoring K-12 and college students in Mathematics. Highly reliable with
+  8 years of professional experience in people management, leadership,
+  documentation, and innovation, gained through the corporate world of
+  Silicon Valley.
+
+  ## Accomplishments
+
+  ### Problem Solving
+  - Assisted students from K-12 through college on a variety of class assignments
+  - Helped students understand how to solve quantitative problems
+
+  ### Creative Lesson Planning
+  - Motivated students to engage with course materials
+  - Organized flashcard games as a recall technique to enhance learning
+
+  ### Grading
+  - Evaluated college level exam papers
+  - Ensured grades accurately and fairly reflected the quality of students' work
+
+  ### Presentation
+  - Designed course presentations for SFSU management classes
+  - Created and delivered presentations using Microsoft PowerPoint and Google Docs
+
+  ### Training
+  - Provided SQL programming training to corporate team members
+  - Enhanced team's data analysis capabilities through classroom instruction
+
+  ## Education
+
+  ### Master of Business Administration: Decision Sciences, 2007
+  San Francisco State University
+  Courses: Operations Management, Total Quality Systems, Project Management,
+  Business Forecasting, Supply Chain Management
+
+  ### Bachelor of Science: Mathematical Engineering, 2004
+  Yildiz Technical University, Turkey
+  Courses: Linear Algebra, Statistics, Probability, Numerical Analysis,
+  Optimization Techniques, Ordinary Differential Equations
+
+  ## Teaching Experience
+
+  ### Volunteer Math Tutor (2015–Present)
+  - Tutored students in Algebra, Geometry, and Statistics
+  - Provided special assistance to English language learners (ELLs)
+
+  ### Teaching Assistant (2005–2007)
+  - Graded exam papers and evaluated class assignments
+  - Assisted in operations analysis and mathematics-related work
+
+  ### Mathematics and Statistics Tutor (2005–2006)
+  - Tutored students in mathematics, statistics, and probability
+  - Covered estimation, hypothesis testing, regression analysis, and correlation
+  - Taught optimization techniques, inventory control, and demand forecasting
+
+  ## Corporate Experience
+
+  ### Operational Excellence Lead, Google Express (2014–2015)
+  - Analyzed data using statistical analysis tools (correlation, multiple regression)
+  - Conducted capacity planning using optimization and data analysis techniques
+  - Identified areas for process and speed improvement
+
+  ### Consultant (2013–2014)
+  - Supported 77Looks application from pre-launch to production
+  - Managed marketing, content, and quality testing areas
+  - Helped grow user base to approximately 1M active users
+
+  ### Operations Manager (2011–2013)
+  - Supervised team of logistics analysts and warehouse staff globally
+  - Defined KPI reports and analytical tools, reducing operational errors by 80%
+  - Created order forecast reports and optimization tools
+
+  ### Senior Analyst (2010–2011)
+  - Ensured warehouse productivity and inventory accuracy
+  - Documented standard operating procedures (SOPs)
+  - Developed workflow processes for operations and customer support teams
+
+  ### Account Manager (2010)
+  - Managed customer accounts for import and export operations
+  - Supervised and trained new users on procurement and warehouse management system
+
+  ## Skills
+  - Tutoring & Teaching: Mathematics, Algebra, Geometry, Statistics, ESL students
+  - Business & Management: Account Management, Data Analysis, Forecasting,
+    Inventory Management, Leadership, Operations Management, Procurement,
+    Project Management, Optimization, Quantitative Analysis
+  - Technical: C, C++, MS Office Suite, Google Docs, SQL
+output: |
+  [
+    "Mathematics",
+    "Problem Solving",
+    "SQL",
+    "Data Analysis",
+    "Statistical Analysis",
+    "Forecasting",
+    "Inventory Management",
+    "Quantitative Analysis",
+    "Optimization",
+    "Operations Management",
+    "Leadership",
+    "Procurement",
+    "Project Management",
+    "Presentation",
+    "Training",
+    "C",
+    "C++",
+    "Microsoft Office Suite",
+    "Google Docs"
+  ]

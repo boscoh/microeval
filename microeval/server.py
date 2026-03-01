@@ -16,7 +16,7 @@ from microeval import __version__
 from microeval.evaluator import get_available_evaluators
 from microeval.graph import extract_evaluation_data, generate_plotly_graph
 from microeval.logger import setup_logging
-from microeval.runner import Runner
+from microeval.runner import create_runner
 from microeval.schemas import RunConfig, TableType, evals_dir, ext_from_table
 from microeval.config import load_env
 from microeval.utils import load_yaml, save_yaml
@@ -27,7 +27,19 @@ setup_logging()
 
 
 async def get_json_from_request(request) -> Dict[str, Any]:
-    """Returns parsed json from request"""
+    """Parse JSON from HTTP request body (FastAPI uses JSON for API communication).
+
+    :param request: HTTP request object.
+    :return: Parsed dictionary from JSON request body. Example::
+
+            {
+              "basename": "summarize-gpt4o",
+              "content": {
+                "chat_service": "openai",
+                "model": "gpt-4o"
+              }
+            }
+    """
     return (
         await request.json()
         if hasattr(request, "json")
@@ -36,7 +48,7 @@ async def get_json_from_request(request) -> Dict[str, Any]:
 
 
 def read_content(file_path: str):
-    """Returns a JSON object for ext='.yaml', or a string if ext='.txt" """
+    """Returns a dictionary for ext='.yaml', or a string if ext='.txt'."""
     file_path = Path(file_path)
     ext = file_path.suffix
     if ext == ".yaml":
@@ -142,22 +154,22 @@ def get_defaults():
     """
     Response: { "content": object }
     """
-    from microeval.llm import load_config
-    chat_models = load_config()["chat_models"]
+    from microeval.llm import load_selectable_models
+    chat_models = load_selectable_models()["chat_models"]
 
-    # Try to load models.json from the eval directory, fall back to package default
-    models_path = Path(evals_dir.name) / "models.json"
+    # Try to load models.yaml from the eval directory, fall back to package default
+    from microeval.utils import load_yaml
+    models_path = Path(evals_dir.name) / "models.yaml"
     if models_path.exists():
         try:
-            with open(models_path, "r") as f:
-                models_config = json.load(f)
-                logger.info(f"Loaded selectable models from '{models_path}'")
-                chat_models_local = models_config.get("chat_models", chat_models)
-        except (json.JSONDecodeError, OSError) as e:
+            models_config = load_yaml(str(models_path))
+            logger.info(f"Loaded selectable models from '{models_path}'")
+            chat_models_local = models_config.get("chat_models", chat_models)
+        except Exception as e:
             logger.warning(f"Failed to load {models_path}, using package default: {e}")
             chat_models_local = chat_models
     else:
-        logger.info("Using package default models.json")
+        logger.info("Using package default models.yaml")
         chat_models_local = chat_models
 
     default_service = "openai"
@@ -288,7 +300,7 @@ async def evaluate(request: EvaluateRequest):
         logger.info(f"Running evaluation of {basename}")
         run_config = RunConfig(**config)
         run_config.save(config_path)
-        runner = Runner(config_path)
+        runner = create_runner(config_path)
         await runner.connect()
     except Exception as e:
         logger.error(f"Error connecting to LLM: {e}")

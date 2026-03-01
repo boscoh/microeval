@@ -1,0 +1,68 @@
+---
+texts:
+- |-
+  - The 2008 financial crisis originated from subprime mortgages bundled into CDOs, mistakenly rated AAA by credit agencies.
+  - Lehman Brothers' bankruptcy and AIG's near-collapse triggered global panic, despite government interventions like TARP.
+  - The crisis led to regulatory reforms, including the Dodd-Frank Act, reshaping financial oversight and risk management.
+- "- The 2008 financial crisis began with the collapse of the U.S. housing market\
+  \ and subprime mortgage defaults.  \n- Lehman Brothers' bankruptcy and AIG's collapse\
+  \ triggered global panic, leading to U.S. government intervention.  \n- The crisis\
+  \ led to the Dodd-Frank Act, reshaping financial oversight and improving regulatory\
+  \ frameworks.  "
+- "- The 2008 financial crisis originated from subprime mortgages bundled into CDOs,\
+  \ misleadingly rated AAA by credit agencies.  \n- Lehman Brothers' bankruptcy and\
+  \ AIG's collapse in 2008 triggered global market panic and credit market disruption.\
+  \  \n- U.S. government response included TARP, Fed rate cuts, and Dodd-Frank Act,\
+  \ reshaping financial regulation and oversight.  "
+evaluations:
+- name: word_count
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: equivalence
+  values:
+  - 0.5
+  - 0.5
+  - 1.0
+  average: 0.6666666666666666
+  standard_deviation: 0.28867513459481287
+- name: relevance_llm
+  values:
+  - 0.75
+  - 0.75
+  - 0.75
+  average: 0.75
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.8184465006642704
+  - 0.8441629970804284
+  - 0.8291150951619837
+  average: 0.8305748643022275
+  standard_deviation: 0.012920245409343946
+- name: elapsed_seconds
+  values:
+  - 1.0918500423431396
+  - 1.0530099868774414
+  - 1.4070839881896973
+  average: 1.1839813391367595
+  standard_deviation: 0.19418607439250987
+- name: token_count
+  values:
+  - 512
+  - 511
+  - 521
+  average: 514.6666666666666
+  standard_deviation: 5.507570547286102
+- name: cost
+  values:
+  - 2.73e-06
+  - 2.7150000000000003e-06
+  - 2.865e-06
+  average: 2.77e-06
+  standard_deviation: 8.261355820929146e-08
+eval_chat_service: openai
+eval_embed_service: openai

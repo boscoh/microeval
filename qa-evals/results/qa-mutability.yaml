@@ -1,0 +1,69 @@
+---
+texts:
+- "The mutable default argument trap in Python occurs when a function uses a mutable\
+  \ object as a default argument, and changes to that object affect all future calls\
+  \ to the function. This happens because default arguments are evaluated only once\
+  \ at the point of function definition in the defining scope. \n\nTo avoid it, use\
+  \ `None` as the default argument and initialize the mutable object inside the function:\n\
+  \n```python\ndef append_to_list(element, list=None):\n    if list is None:\n   \
+  \     list = []\n    list.append(element)\n    return list\n```"
+- "The mutable default argument trap in Python occurs when a function uses a mutable\
+  \ object as a default argument, and changes to that object affect all future calls\
+  \ to the function. This happens because default arguments are evaluated only once\
+  \ at the point of function definition in the defining scope. \n\nTo avoid this trap,\
+  \ use `None` as the default argument and initialize the mutable object inside the\
+  \ function:\n\n```python\ndef append_to_list(element, list=None):\n    if list is\
+  \ None:\n        list = []\n    list.append(element)\n    return list\n```"
+- "The mutable default argument trap in Python occurs when a function uses a mutable\
+  \ object as a default argument, and changes to that object affect all future calls\
+  \ to the function. This happens because default arguments are evaluated only once\
+  \ at the point of function definition in the defining scope. \n\nTo avoid it, use\
+  \ `None` as the default argument and initialize the mutable object inside the function:\n\
+  \n```python\ndef append_to_list(element, list=None):\n    if list is None:\n   \
+  \     list = []\n    list.append(element)\n    return list\n```"
+evaluations:
+- name: equivalence
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_llm
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.7688261853828675
+  - 0.7764235746070686
+  - 0.7688261853828675
+  average: 0.7713586484576012
+  standard_deviation: 0.004386354713730842
+- name: elapsed_seconds
+  values:
+  - 0.3621189594268799
+  - 0.31281614303588867
+  - 0.3708531856536865
+  average: 0.34859609603881836
+  standard_deviation: 0.03129257826728491
+- name: token_count
+  values:
+  - 227
+  - 228
+  - 227
+  average: 227.33333333333334
+  standard_deviation: 0.5773502691896257
+- name: cost
+  values:
+  - 1.17023e-07
+  - 1.17722e-07
+  - 1.17023e-07
+  average: 1.17256e-07
+  standard_deviation: 4.0356783816354755e-10
+eval:
+  chat_service: openai
+  embed_service: openai

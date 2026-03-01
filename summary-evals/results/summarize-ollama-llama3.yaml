@@ -1,0 +1,67 @@
+---
+texts:
+- |-
+  • Issued millions of subprime mortgages to borrowers with poor credit histories, triggering widespread defaults.
+  • Bundled these loans into complex securities called CDOs, which were given top AAA ratings by flawed models.
+  • Purchased these instruments believing they were safe, contributing to a global credit market panic.
+- |-
+  • Collapsed housing market triggers massive mortgage defaults and subsequent crisis unfolding.
+  • Global investors blindly purchase flawed securities with top AAA ratings, unaware risks.
+  • U.S. government intervenes with TARP and monetary policy to stabilize financial markets.
+- |-
+  • Collapsing housing market triggers widespread panic across global credit markets.
+  • Mortgage defaults surge as home prices peak in 2006, causing hedge funds to shut down.
+  • Government intervenes with TARP and quantitative easing measures to stabilize financial institutions.
+evaluations:
+- name: word_count
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: equivalence
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: relevance_llm
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.6026363230640492
+  - 0.7381394157206831
+  - 0.755106373895303
+  average: 0.6986273708933451
+  standard_deviation: 0.08356243393385242
+- name: elapsed_seconds
+  values:
+  - 5.225977182388306
+  - 2.181854009628296
+  - 2.3109569549560547
+  average: 3.2395960489908853
+  standard_deviation: 1.7214672224474652
+- name: token_count
+  values:
+  - 356
+  - 346
+  - 348
+  average: 350
+  standard_deviation: 5.291502622129181
+- name: cost
+  values:
+  - 0.0
+  - 0.0
+  - 0.0
+  average: 0.0
+  standard_deviation: 0.0
+eval:
+  chat_service: openai
+  embed_service: openai

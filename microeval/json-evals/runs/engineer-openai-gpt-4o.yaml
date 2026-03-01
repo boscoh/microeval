@@ -2,7 +2,7 @@
 file_path: null
 query_ref: engineer
 prompt_ref: candidate-skills
-service: openai
+chat_service: openai
 model: gpt-4o
 repeat: 3
 temperature: 0.0

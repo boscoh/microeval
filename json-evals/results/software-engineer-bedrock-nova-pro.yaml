@@ -1,0 +1,104 @@
+---
+texts:
+- |-
+  ```json
+  [
+    "Python",
+    "TypeScript",
+    "REST APIs",
+    "GraphQL",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "CI/CD",
+    "Agile",
+    "Scrum",
+    "React",
+    "PostgreSQL",
+    "Redis",
+    "Git"
+  ]
+  ```
+- |-
+  ```json
+  [
+    "Python",
+    "TypeScript",
+    "REST APIs",
+    "GraphQL",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "CI/CD",
+    "Agile",
+    "Scrum",
+    "React",
+    "PostgreSQL",
+    "Redis",
+    "Git"
+  ]
+  ```
+- |-
+  ```json
+  [
+    "Python",
+    "TypeScript",
+    "REST APIs",
+    "GraphQL",
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "CI/CD",
+    "Agile",
+    "Scrum",
+    "React",
+    "PostgreSQL",
+    "Redis",
+    "Git"
+  ]
+  ```
+evaluations:
+- name: equivalence
+  values:
+  - 1.0
+  - 1.0
+  - 0.5
+  average: 0.8333333333333334
+  standard_deviation: 0.28867513459481287
+- name: relevance_llm
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.3759919601803321
+  - 0.3759919601803321
+  - 0.3759919601803321
+  average: 0.3759919601803321
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 1.3618969917297363
+  - 0.9186697006225586
+  - 0.9769289493560791
+  average: 1.085831880569458
+  standard_deviation: 0.24084745009175657
+- name: token_count
+  values:
+  - 568
+  - 568
+  - 568
+  average: 568
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 2.92875e-06
+  - 2.92875e-06
+  - 2.92875e-06
+  average: 2.92875e-06
+  standard_deviation: 0.0
+eval_chat_service: openai
+eval_embed_service: openai

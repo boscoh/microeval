@@ -1,0 +1,9 @@
+---
+query_ref: engineer
+prompt_ref: candidate-skills
+chat_service: ollama
+model: llama3.2
+repeat: 3
+temperature: 0.0
+evaluators:
+- equivalence

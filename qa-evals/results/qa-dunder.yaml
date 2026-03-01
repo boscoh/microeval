@@ -1,0 +1,60 @@
+---
+texts:
+- >-
+  `__str__` returns a human-readable string representation of an object, while `__repr__`
+  returns a string that is a valid Python expression, ideally one that could be used
+  to recreate the object.
+- >-
+  `__str__` returns a human-readable string representation of an object, while `__repr__`
+  returns a string that is a valid Python expression, ideally one that could be used
+  to recreate the object.
+- >-
+  `__str__` returns a human-readable string representation of an object, while `__repr__`
+  returns a string that is a valid Python expression, ideally one that could be used
+  to recreate the object.
+evaluations:
+- name: equivalence
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: relevance_llm
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.8301188103185687
+  - 0.8301188103185687
+  - 0.8301188103185687
+  average: 0.8301188103185687
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 0.1553511619567871
+  - 0.15915918350219727
+  - 0.16783380508422852
+  average: 0.1607813835144043
+  standard_deviation: 0.006397479544435325
+- name: token_count
+  values:
+  - 164
+  - 164
+  - 164
+  average: 164
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 7.2286e-08
+  - 7.2286e-08
+  - 7.2286e-08
+  average: 7.2286e-08
+  standard_deviation: 0.0
+eval:
+  chat_service: openai
+  embed_service: openai

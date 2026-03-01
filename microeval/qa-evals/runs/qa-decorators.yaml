@@ -2,12 +2,13 @@
 file_path: null
 query_ref: python-decorators
 prompt_ref: qa-assistant
-service: groq
+chat_service: groq
 model: llama-3.3-70b-versatile
 repeat: 3
 temperature: 0.0
 evaluators:
 - equivalence
-- relevance
-eval_service: openai
+- relevance_llm
+- relevance_embedding
+eval_chat_service: openai
 eval_model: gpt-4o

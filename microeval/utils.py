@@ -56,7 +56,16 @@ def snap_score(value: float, valid_scores: tuple = (0.0, 0.5, 1.0)) -> float:
 
 
 def parse_json(text: str) -> Optional[Dict[str, Any]]:
-    """Extract a JSON object from text, handling markdown code blocks and embedded JSON."""
+    """Extract a JSON object from text, handling markdown code blocks and embedded JSON.
+
+    :param text: Text that may contain JSON (e.g., "{\"score\": 0.5}" or "```json\n{\"score\": 0.5}\n```").
+    :return: Parsed dictionary if found, None otherwise. Example::
+
+            {
+              "score": 0.5,
+              "reasoning": "Partial match"
+            }
+    """
     if not text:
         return None
 

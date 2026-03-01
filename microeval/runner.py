@@ -1,43 +1,132 @@
 import logging
 from statistics import mean, stdev
 
+import pydash
 from path import Path
 
+from typing import TYPE_CHECKING, Optional
+
+from microeval.config import _get_connected_llm_client, _get_default_model
 from microeval.evaluator import EvaluationRunner
-from microeval.llm import get_llm_client
 from microeval.schemas import RunConfig, RunResult, evals_dir
 from microeval.utils import save_yaml
+
+if TYPE_CHECKING:
+    from microeval.llm import SimpleLLMClient
 
 logger = logging.getLogger(__name__)
 
 
-def get_eval_llm_client(config: RunConfig):
-    """
-    Get LLM client for evaluations.
-    Uses eval_service/eval_model if specified, otherwise falls back to the tested LLM.
-    """
-    if config.eval_service:
-        kwargs = {}
-        if config.eval_model:
-            kwargs["model"] = config.eval_model
-        logger.info(f"Using separate LLM for evaluation: {config.eval_service}")
-        return get_llm_client(config.eval_service, **kwargs)
-
-    return get_llm_client(config.service, model=config.model)
-
-
 class Runner:
-    def __init__(self, file_path: str):
-        self._config = RunConfig.read_from_yaml(file_path)
-        self._llm = get_llm_client(self._config.service, model=self._config.model)
-        self._eval_llm = get_eval_llm_client(self._config)
-        self._evaluation_runner = EvaluationRunner(self._eval_llm, self._config)
+    def __init__(self, config: RunConfig):
+        """Initialize Runner with config.
+        
+        Clients are created and connected when connect() is called.
+        
+        :param config: RunConfig with evaluation settings
+        """
+        self._config = config
+        self._main_llm_client = None
+        self._eval_llm_client = None
+        self._eval_embed_llm_client = None
+        self._evaluation_runner = None
         self._connected = False
 
+    def _resolve_service_model(self, service: str, model: str, model_type: str = "chat_models") -> tuple[str, str]:
+        """Resolve service and model with defaults.
+        
+        :param service: Service name
+        :param model: Model name (may be empty)
+        :param model_type: Type of models to look up ("chat_models" or "embed_models")
+        :return: Tuple of (service, model) with defaults applied
+        """
+        if not model:
+            model = _get_default_model(service, model_type) or "default"
+        return service, model
+
+    async def _get_main_llm_client(self) -> "SimpleLLMClient":
+        """Get and connect main LLM client for the query being tested."""
+        service, model = self._resolve_service_model(
+            self._config.chat_service, self._config.model, "chat_models"
+        )
+        return await _get_connected_llm_client(service, model)
+
+    async def _get_eval_llm_client(self) -> "SimpleLLMClient":
+        """Get and connect LLM client for LLM-based evaluators."""
+        if self._config.eval_chat_service:
+            service = self._config.eval_chat_service
+            model = self._config.eval_model
+        else:
+            service = self._config.chat_service
+            model = self._config.model
+        
+        service, model = self._resolve_service_model(service, model, "chat_models")
+        return await _get_connected_llm_client(service, model)
+
+    async def _get_embed_client(self) -> "SimpleLLMClient":
+        """Get and connect embedding client for embedding-based evaluators.
+        
+        Selection priority:
+        1. eval_embed_service/embed_model if specified
+        2. Default embed model from eval_chat_service or chat_service
+        3. Use eval_chat_service or chat_service client if it supports embeddings
+        4. Fall back to OpenAI text-embedding-3-small
+        """
+        if self._config.eval_embed_service:
+            service, model = self._resolve_service_model(
+                self._config.eval_embed_service, self._config.embed_model, "embed_models"
+            )
+            return await _get_connected_llm_client(service, model)
+
+        eval_chat_service = self._config.eval_chat_service or self._config.chat_service
+        
+        if eval_chat_service and eval_chat_service != "groq":
+            client = await self._try_get_embed_client_from_service(eval_chat_service)
+            if client:
+                return client
+
+        if self._config.chat_service and self._config.chat_service != "groq":
+            client = await self._try_get_embed_client_from_service(self._config.chat_service)
+            if client:
+                return client
+
+        return await _get_connected_llm_client("openai", "text-embedding-3-small")
+
+    async def _try_get_embed_client_from_service(self, service: str) -> Optional["SimpleLLMClient"]:
+        """Try to get an embedding client from a service.
+        
+        :param service: Service name to try
+        :return: Embedding client if found, None otherwise
+        """
+        default_embed_model = _get_default_model(service, "embed_models")
+        if default_embed_model:
+            return await _get_connected_llm_client(service, default_embed_model)
+
+        if self._config.eval_chat_service and service == self._config.eval_chat_service:
+            model = self._config.eval_model or "default"
+        else:
+            model = self._config.model or "default"
+        
+        client = await _get_connected_llm_client(service, model)
+        if hasattr(client, "get_embedding"):
+            return client
+        
+        return None
+
     async def connect(self) -> bool:
-        await self._llm.connect()
-        if self._eval_llm is not self._llm:
-            await self._eval_llm.connect()
+        """Get and connect all LLM clients (idempotent - clients are cached by service/model).
+        
+        Clients are automatically connected and cached, so multiple calls with the same
+        config return the same client instances.
+        """
+        self._main_llm_client = await self._get_main_llm_client()
+        self._eval_llm_client = await self._get_eval_llm_client()
+        self._eval_embed_llm_client = await self._get_embed_client()
+        
+        self._evaluation_runner = EvaluationRunner(
+            self._eval_llm_client, self._config, self._eval_embed_llm_client
+        )
+        
         self._connected = True
         return True
 
@@ -64,10 +153,10 @@ class Runner:
             run_id = Path(self._config.file_path).stem
             for i in range(self._config.repeat):
                 logger.info(
-                    f">>> Evaluate iteration {i + 1}/{self._config.repeat} {run_id}"
+                    f">>> Evaluate iteration {i + 1}/{self._config.repeat} '{run_id}'"
                 )
 
-                response = await self._llm.get_completion(
+                response = await self._main_llm_client.get_completion(
                     messages=[
                         {"role": "system", "content": self._config.prompt},
                         {"role": "user", "content": self._config.input},
@@ -77,14 +166,14 @@ class Runner:
 
                 response_texts.append(response["text"])
 
-                elapsed_seconds = response["metadata"]["usage"]["elapsed_seconds"]
+                elapsed_seconds = pydash.get(response, "metadata.usage.elapsed_seconds")
                 logger.debug(f"ElapsedSeconds: {elapsed_seconds}")
 
-                usage = response["metadata"]["usage"]
-                token_count = usage.get("prompt_tokens", 0) + usage.get("completion_tokens", 0)
-                cost_value = self._llm.get_token_cost(
-                    usage.get("prompt_tokens", 0),
-                    usage.get("completion_tokens", 0),
+                usage = pydash.get(response, "metadata.usage")
+                token_count = pydash.get(usage, "prompt_tokens", 0) + pydash.get(usage, "completion_tokens", 0)
+                cost_value = self._main_llm_client.get_token_cost(
+                    pydash.get(usage, "prompt_tokens", 0),
+                    pydash.get(usage, "completion_tokens", 0),
                 )
                 logger.debug(f"TokenCount: {token_count}")
 
@@ -106,23 +195,43 @@ class Runner:
 
             evaluations = [result.model_dump() for result in eval_results_dict.values()]
 
-            eval_results = {"texts": response_texts, "evaluations": evaluations}
+            eval_results = {
+                "texts": response_texts,
+                "evaluations": evaluations,
+                "eval": {
+                    "chat_service": self._eval_llm_client.service,
+                    "embed_service": self._eval_embed_llm_client.service,
+                },
+            }
             save_yaml(eval_results, results_path)
 
             logger.info(f"Results saved to '{results_path}'")
         except Exception as e:
             logger.error(f"Error during run: {e}")
             raise
-        finally:
-            await self._llm.close()
-            if self._eval_llm is not self._llm:
-                await self._eval_llm.close()
+
+
+def create_runner(file_path: str) -> Runner:
+    """Create a Runner instance from config file.
+    
+    Clients are created and connected when connect() is called.
+    
+    :param file_path: Path to run configuration YAML file
+    :return: Runner instance (call connect() to initialize clients)
+    """
+    config = RunConfig.read_from_yaml(file_path)
+    return Runner(config)
 
 
 async def run_all(file_paths):
+    """Run all evaluations sequentially.
+    
+    Clients are cached and reused across runs, so they are not closed between runs.
+    They will be cleaned up when the process exits.
+    """
     for run_config in file_paths:
         try:
-            runner = Runner(run_config)
+            runner = create_runner(run_config)
             await runner.connect()
         except Exception as e:
             logger.error(f"Failed to connect to LLM for '{run_config}': {e}")

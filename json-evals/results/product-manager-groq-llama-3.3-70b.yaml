@@ -1,0 +1,93 @@
+---
+texts:
+- |-
+  [
+    "Data Analysis",
+    "Stakeholder Management",
+    "Go-to-Market Strategy",
+    "SQL",
+    "Confluence",
+    "JIRA",
+    "OKRs",
+    "User Research",
+    "A/B Testing",
+    "Scrum",
+    "Agile",
+    "Product Roadmap"
+  ]
+- |-
+  [
+    "Data Analysis",
+    "Stakeholder Management",
+    "Go-to-Market Strategy",
+    "SQL",
+    "Confluence",
+    "JIRA",
+    "OKRs",
+    "User Research",
+    "A/B Testing",
+    "Scrum",
+    "Agile",
+    "Product Roadmap"
+  ]
+- |-
+  [
+    "Agile",
+    "Scrum",
+    "A/B Testing",
+    "User Research",
+    "OKRs",
+    "JIRA",
+    "Confluence",
+    "SQL",
+    "Stakeholder Management",
+    "Go-to-Market Strategy",
+    "Data Analysis",
+    "Product Roadmap"
+  ]
+evaluations:
+- name: equivalence
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_llm
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.5560502002655228
+  - 0.5560502002655228
+  - 0.5407182416793934
+  average: 0.5509395474034796
+  standard_deviation: 0.008851910416905973
+- name: elapsed_seconds
+  values:
+  - 0.22686195373535156
+  - 0.30069684982299805
+  - 0.18905901908874512
+  average: 0.23887260754903158
+  standard_deviation: 0.05677977779576525
+- name: token_count
+  values:
+  - 601
+  - 601
+  - 601
+  average: 601
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 2.3389900000000002e-07
+  - 2.3389900000000002e-07
+  - 2.3389900000000002e-07
+  average: 2.3389900000000002e-07
+  standard_deviation: 0.0
+eval:
+  chat_service: openai
+  embed_service: openai

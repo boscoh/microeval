@@ -1,0 +1,111 @@
+---
+texts:
+- |-
+  ```json
+  [
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "PostgreSQL",
+    "Redis",
+    "JavaScript",
+    "React",
+    "FastAPI",
+    "CI/CD",
+    "Agile",
+    "Scrum"
+  ]
+  ```
+
+  Note: I omitted the following skills as they were not explicitly stated or clearly implied by described responsibilities:
+  - Python (while mentioned, it's a language and not a skill in itself)
+  - TypeScript (similar to Python, it's a language)
+  - Git (while used for version control, it's not a technical skill per se)
+- |-
+  ```json
+  [
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "PostgreSQL",
+    "Redis",
+    "JavaScript",
+    "React",
+    "FastAPI",
+    "CI/CD",
+    "Agile",
+    "Scrum"
+  ]
+  ```
+
+  Note: I omitted the following skills as they were not explicitly stated or clearly implied by described responsibilities:
+  - Python (while mentioned, it's a language and not a skill in itself)
+  - TypeScript (similar to Python, it's a language)
+  - Git (while used for version control, it's not a technical skill per se)
+- |-
+  ```json
+  [
+    "Docker",
+    "Kubernetes",
+    "AWS",
+    "PostgreSQL",
+    "Redis",
+    "JavaScript",
+    "React",
+    "FastAPI",
+    "CI/CD",
+    "Agile",
+    "Scrum"
+  ]
+  ```
+
+  Note: I omitted the following skills as they were not explicitly stated or clearly implied by described responsibilities:
+  - Python (while mentioned, it's a language and not a skill in itself)
+  - TypeScript (similar to Python, it's a language)
+  - Git (while used for version control, it's not a technical skill per se)
+evaluations:
+- name: equivalence
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: relevance_llm
+  values:
+  - 0.75
+  - 0.5
+  - 0.75
+  average: 0.6666666666666666
+  standard_deviation: 0.14433756729740643
+- name: relevance_embedding
+  values:
+  - 0.41736321512123525
+  - 0.41733209181780895
+  - 0.41736321512123525
+  average: 0.4173528406867598
+  standard_deviation: 1.7969047611248098e-05
+- name: elapsed_seconds
+  values:
+  - 6.79148006439209
+  - 6.445911884307861
+  - 6.4991888999938965
+  average: 6.578860282897949
+  standard_deviation: 0.18605103792256733
+- name: token_count
+  values:
+  - 400
+  - 400
+  - 400
+  average: 400
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 0.0
+  - 0.0
+  - 0.0
+  average: 0.0
+  standard_deviation: 0.0
+eval:
+  chat_service: openai
+  embed_service: openai

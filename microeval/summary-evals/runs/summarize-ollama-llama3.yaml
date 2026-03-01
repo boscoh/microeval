@@ -2,11 +2,12 @@
 file_path: null
 query_ref: financial_crisis_2008
 prompt_ref: bullet_points
-service: ollama
+chat_service: ollama
 model: llama3.2
 repeat: 3
 temperature: 0.5
 evaluators:
 - word_count
 - equivalence
-- relevance
+- relevance_llm
+- relevance_embedding

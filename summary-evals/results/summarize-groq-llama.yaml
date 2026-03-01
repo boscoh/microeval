@@ -1,0 +1,67 @@
+---
+texts:
+- |-
+  * Collapsing housing markets triggered financial crisis
+  * Institutions investing heavily in flawed securities
+  * Governments intervening with relief programs globally
+- |-
+  * Collapsing housing markets triggered financial crisis
+  * Institutions failing due to poor risk management
+  * Governments intervening with regulatory reforms
+- |-
+  * Collapsing housing markets triggered financial crisis
+  * Institutions failing due to poor risk management
+  * Governments intervening with regulatory reforms
+evaluations:
+- name: word_count
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: equivalence
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: relevance_llm
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.6745610851431466
+  - 0.6653077012921786
+  - 0.6653077012921786
+  average: 0.6683921625758347
+  standard_deviation: 0.005342443657271292
+- name: elapsed_seconds
+  values:
+  - 0.32906174659729004
+  - 0.2396240234375
+  - 0.44032788276672363
+  average: 0.3363378842671712
+  standard_deviation: 0.10054957196305957
+- name: token_count
+  values:
+  - 490
+  - 490
+  - 490
+  average: 490
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 1.8011e-07
+  - 1.8011e-07
+  - 1.8011e-07
+  average: 1.8011e-07
+  standard_deviation: 0.0
+eval:
+  chat_service: openai
+  embed_service: openai

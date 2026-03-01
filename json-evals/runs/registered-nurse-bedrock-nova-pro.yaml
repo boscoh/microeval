@@ -1,0 +1,13 @@
+---
+query_ref: registered-nurse
+prompt_ref: candidate-skills
+chat_service: bedrock
+model: amazon.nova-pro-v1:0
+repeat: 3
+temperature: 0.0
+evaluators:
+- equivalence
+- relevance_llm
+- relevance_embedding
+eval_chat_service: openai
+eval_model: gpt-4o

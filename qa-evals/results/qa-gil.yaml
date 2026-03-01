@@ -1,0 +1,66 @@
+---
+texts:
+- >-
+  The Global Interpreter Lock (GIL) is a mechanism in Python that prevents multiple
+  native threads from executing Python bytecodes at once. It affects multithreaded
+  programs by limiting parallel execution of threads, making true parallelism in CPU-bound
+  tasks impossible. However, it does allow for concurrent execution of I/O-bound tasks,
+  as the GIL is released during I/O operations, allowing other threads to run.
+- >-
+  The Global Interpreter Lock (GIL) is a mechanism in Python that prevents multiple
+  native threads from executing Python bytecodes at once. It affects multithreaded
+  programs by limiting parallel execution of threads, making true parallelism in CPU-bound
+  tasks impossible. However, it does allow for concurrent execution of I/O-bound tasks,
+  as the GIL is released during I/O operations.
+- >-
+  The Global Interpreter Lock (GIL) is a mechanism in Python that prevents multiple
+  native threads from executing Python bytecodes at once. It affects multithreaded
+  programs by limiting parallel execution of threads, making true parallelism in CPU-bound
+  tasks impossible. However, it does allow for concurrent execution of I/O-bound tasks,
+  as the GIL is released during I/O operations, allowing other threads to run.
+evaluations:
+- name: equivalence
+  values:
+  - 1.0
+  - 0.5
+  - 0.5
+  average: 0.6666666666666666
+  standard_deviation: 0.28867513459481287
+- name: relevance_llm
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_embedding
+  values:
+  - 0.8271292419559774
+  - 0.827311038822295
+  - 0.8271292419559774
+  average: 0.8271898409114166
+  standard_deviation: 0.00010496046970628814
+- name: elapsed_seconds
+  values:
+  - 0.33028292655944824
+  - 0.4203331470489502
+  - 0.24703598022460938
+  average: 0.3325506846110026
+  standard_deviation: 0.08667083738069654
+- name: token_count
+  values:
+  - 202
+  - 196
+  - 202
+  average: 200
+  standard_deviation: 3.4641016151377544
+- name: cost
+  values:
+  - 9.9198e-08
+  - 9.5004e-08
+  - 9.9198e-08
+  average: 9.78e-08
+  standard_deviation: 2.4214070289812928e-09
+eval:
+  chat_service: openai
+  embed_service: openai

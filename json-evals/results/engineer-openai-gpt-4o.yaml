@@ -1,0 +1,165 @@
+---
+texts:
+- |-
+  ```json
+  [
+    "People Management",
+    "Leadership",
+    "Documentation",
+    "Innovation",
+    "Problem Solving",
+    "Creative Lesson Planning",
+    "Grading",
+    "Presentation",
+    "SQL Programming",
+    "Data Analysis",
+    "Mathematics Tutoring",
+    "Algebra",
+    "Geometry",
+    "Statistics",
+    "Operations Analysis",
+    "Probability",
+    "Estimation",
+    "Hypothesis Testing",
+    "Regression Analysis",
+    "Correlation",
+    "Optimization Techniques",
+    "Inventory Control",
+    "Demand Forecasting",
+    "Statistical Analysis",
+    "Capacity Planning",
+    "Process Improvement",
+    "Marketing",
+    "Content Management",
+    "Quality Testing",
+    "Logistics Management",
+    "KPI Reporting",
+    "Analytical Tools",
+    "Order Forecasting",
+    "Workflow Development",
+    "Customer Support",
+    "Account Management",
+    "Procurement",
+    "Warehouse Management",
+    "C Programming",
+    "C++ Programming",
+    "Microsoft Office",
+    "Google Docs"
+  ]
+  ```
+- |-
+  ```json
+  [
+    "People Management",
+    "Leadership",
+    "Documentation",
+    "Innovation",
+    "Problem Solving",
+    "Creative Lesson Planning",
+    "Grading",
+    "Presentation",
+    "SQL Programming",
+    "Data Analysis",
+    "Mathematics Tutoring",
+    "Algebra",
+    "Geometry",
+    "Statistics",
+    "Operations Analysis",
+    "Probability",
+    "Estimation",
+    "Hypothesis Testing",
+    "Regression Analysis",
+    "Correlation",
+    "Optimization Techniques",
+    "Inventory Control",
+    "Demand Forecasting",
+    "Statistical Analysis",
+    "Capacity Planning",
+    "Process Improvement",
+    "Marketing",
+    "Content Management",
+    "Quality Testing",
+    "Logistics Management",
+    "KPI Reporting",
+    "Analytical Tools",
+    "Order Forecasting",
+    "Standard Operating Procedures",
+    "Workflow Processes",
+    "Customer Support",
+    "Account Management",
+    "Procurement",
+    "Warehouse Management",
+    "C Programming",
+    "C++ Programming",
+    "Microsoft Office",
+    "Google Docs"
+  ]
+  ```
+- |-
+  ```json
+  [
+    "SQL",
+    "Data Analysis",
+    "Statistical Analysis",
+    "Capacity Planning",
+    "Optimization",
+    "Process Improvement",
+    "Marketing",
+    "Quality Testing",
+    "User Growth",
+    "Logistics Management",
+    "KPI Reporting",
+    "Forecasting",
+    "Workflow Development",
+    "Customer Support",
+    "Account Management",
+    "Procurement",
+    "Warehouse Management",
+    "Tutoring",
+    "Teaching",
+    "Mathematics",
+    "Algebra",
+    "Geometry",
+    "Statistics",
+    "ESL Instruction",
+    "Leadership",
+    "Operations Management",
+    "Project Management",
+    "C",
+    "C++",
+    "Microsoft Office",
+    "Google Docs"
+  ]
+  ```
+evaluations:
+- name: equivalence
+  values:
+  - 0.5
+  - 0.5
+  - 0.5
+  average: 0.5
+  standard_deviation: 0.0
+- name: elapsed_seconds
+  values:
+  - 2.98832106590271
+  - 5.153671026229858
+  - 2.331300973892212
+  average: 3.4910976886749268
+  standard_deviation: 1.4768315501057592
+- name: token_count
+  values:
+  - 1116
+  - 1122
+  - 1054
+  average: 1097.3333333333333
+  standard_deviation: 37.64748774265467
+- name: cost
+  values:
+  - 6.660000000000001e-06
+  - 6.75e-06
+  - 5.729999999999999e-06
+  average: 6.38e-06
+  standard_deviation: 5.647123161398204e-07
+eval:
+  chat_service: openai
+  embed_service: openai

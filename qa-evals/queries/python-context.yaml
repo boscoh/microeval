@@ -1,0 +1,4 @@
+---
+input: How do you implement a custom context manager in Python?
+output: |
+  Two approaches: (1) Class-based — define `__enter__` (setup, returns the resource) and `__exit__` (cleanup, receives exception type, value, and traceback; return True to suppress exceptions). (2) Generator-based — decorate a generator function with `@contextlib.contextmanager`; code before `yield` runs on entry, the yielded value is bound by `as`, and code after `yield` (typically in a `finally` block) runs on exit.

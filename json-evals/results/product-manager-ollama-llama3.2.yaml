@@ -1,0 +1,90 @@
+---
+texts:
+- |-
+  [
+    "A/B Testing",
+    "Agile",
+    "Data Analysis",
+    "Go-to-Market Strategy",
+    "JIRA",
+    "OKRs",
+    "Product Roadmap",
+    "Scrum",
+    "SQL",
+    "Stakeholder Management",
+    "User Research"
+  ]
+- |-
+  [
+    "A/B Testing",
+    "Agile",
+    "Data Analysis",
+    "Go-to-Market Strategy",
+    "JIRA",
+    "OKRs",
+    "Product Roadmap",
+    "Scrum",
+    "SQL",
+    "Stakeholder Management",
+    "User Research"
+  ]
+- |-
+  [
+    "A/B Testing",
+    "Agile",
+    "Data Analysis",
+    "Go-to-Market Strategy",
+    "JIRA",
+    "OKRs",
+    "Product Roadmap",
+    "Scrum",
+    "SQL",
+    "Stakeholder Management",
+    "User Research"
+  ]
+evaluations:
+- name: equivalence
+  values:
+  - 1.0
+  - 1.0
+  - 1.0
+  average: 1.0
+  standard_deviation: 0.0
+- name: relevance_llm
+  values:
+  - 0.5
+  - 0.75
+  - 0.5
+  average: 0.5833333333333334
+  standard_deviation: 0.14433756729740643
+- name: relevance_embedding
+  values:
+  - 0.5270596109484647
+  - 0.5271440515399186
+  - 0.5270596109484647
+  average: 0.5270877578122827
+  standard_deviation: 4.875179820647521e-05
+- name: elapsed_seconds
+  values:
+  - 11.345243215560913
+  - 4.840894937515259
+  - 6.419234037399292
+  average: 7.535124063491821
+  standard_deviation: 3.3927193434291696
+- name: token_count
+  values:
+  - 352
+  - 352
+  - 352
+  average: 352
+  standard_deviation: 0.0
+- name: cost
+  values:
+  - 0.0
+  - 0.0
+  - 0.0
+  average: 0.0
+  standard_deviation: 0.0
+eval:
+  chat_service: openai
+  embed_service: openai

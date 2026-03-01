@@ -1,9 +1,14 @@
 import logging
-
+from functools import lru_cache
+import pydash
 from dotenv import load_dotenv
 from path import Path
 
+from microeval.llm import SimpleLLMClient, get_llm_client, load_selectable_models
+
 logger = logging.getLogger(__name__)
+
+_env_loaded = False
 
 
 def load_env() -> bool:
@@ -11,7 +16,7 @@ def load_env() -> bool:
 
     Searches for .env file in:
     1. Current working directory
-    2. Module parent directory (chatboti package location)
+    2. Module parent directory
 
     Only loads once per process unless force=True is specified.
     Logs the location of the .env file when found.
@@ -20,11 +25,9 @@ def load_env() -> bool:
     """
     global _env_loaded
 
-    # Skip if already loaded (unless forced)
     if _env_loaded:
         return True
 
-    # Try current working directory first
     cwd_env = Path.cwd() / ".env"
     if cwd_env.exists():
         logger.info(f"Loading .env from: {cwd_env}")
@@ -32,7 +35,6 @@ def load_env() -> bool:
         _env_loaded = True
         return True
 
-    # Try module parent directory
     module_dir = Path(__file__).parent.parent
     module_env = module_dir / ".env"
     if module_env.exists():
@@ -44,4 +46,46 @@ def load_env() -> bool:
     return False
 
 
-_env_loaded = False
+@lru_cache()
+def _get_default_model(service: str, model_type: str) -> str:
+    """Get the default model for a service.
+
+    :param service: Service name
+    :param model_type: 'chat_models' or 'embed_models'
+    :return: Default model name or empty string
+    """
+    config = load_selectable_models()
+    models = pydash.get(config, f"{model_type}.{service}", [])
+    if isinstance(models, list) and models:
+        return models[0]
+    if isinstance(models, str):
+        return models
+    return ""
+
+
+@lru_cache(maxsize=128)
+def _get_cached_llm_client_sync(service: str, model: str) -> SimpleLLMClient:
+    """Get cached LLM client instance by service and model (idempotent, sync).
+    
+    Returns unconnected client instance.
+    
+    :param service: Service name (openai, ollama, bedrock, groq)
+    :param model: Model name or "default"
+    :return: Cached SimpleLLMClient instance (not connected)
+    """
+    kwargs = {}
+    if model != "default":
+        kwargs["model"] = model
+    return get_llm_client(service, **kwargs)
+
+
+async def _get_connected_llm_client(service: str, model: str) -> SimpleLLMClient:
+    """Get cached and connected LLM client by service and model (idempotent).
+    
+    :param service: Service name (openai, ollama, bedrock, groq)
+    :param model: Model name or "default"
+    :return: Cached and connected SimpleLLMClient instance
+    """
+    client = _get_cached_llm_client_sync(service, model)
+    await client.connect()
+    return client

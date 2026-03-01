@@ -2,7 +2,7 @@
 file_path: null
 query_ref: engineer
 prompt_ref: candidate-skills
-service: ollama
+chat_service: ollama
 model: llama3.2
 repeat: 3
 temperature: 0.0

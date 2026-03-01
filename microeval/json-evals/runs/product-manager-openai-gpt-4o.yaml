@@ -2,12 +2,13 @@
 file_path: null
 query_ref: product-manager
 prompt_ref: candidate-skills
-service: openai
+chat_service: openai
 model: gpt-4o
 repeat: 3
 temperature: 0.0
 evaluators:
 - equivalence
-- relevance
-eval_service: null
+- relevance_llm
+- relevance_embedding
+eval_chat_service: null
 eval_model: null
