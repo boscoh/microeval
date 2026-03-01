@@ -843,8 +843,8 @@
           const content = await fetchObject("result", runName);
           runResult.value = content.evaluations || [];
           runResultMetadata.value = {
-            evalChatService: content.eval?.eval_chat_service,
-            evalEmbedService: content.eval?.eval_embed_service,
+            evalChatService: content.eval_models?.eval_chat_service,
+            evalEmbedService: content.eval_models?.eval_embed_service,
           };
           const responseTexts = content.texts || [];
           sampleOutput.value = Array.isArray(responseTexts) ? responseTexts : [];

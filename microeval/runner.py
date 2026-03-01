@@ -216,7 +216,7 @@ class Runner:
             eval_results = {
                 "texts": response_texts,
                 "evaluations": evaluations,
-                "eval": {
+                "eval_models": {
                     "eval_chat_service": self._eval_llm_client.service,
                     "eval_chat_model": self._eval_llm_client.model or "default",
                     "eval_embed_service": self._eval_embed_llm_client.service,

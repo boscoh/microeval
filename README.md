@@ -174,7 +174,7 @@ evaluations:
   values: [0.87, 0.89, 0.85]
   average: 0.87
   standard_deviation: 0.02
-eval:
+eval_models:
   eval_chat_service: openai
   eval_chat_model: gpt-4o-mini
   eval_embed_service: openai
@@ -429,7 +429,7 @@ microeval ui my-evals --reload        # Enable auto-reload for development
 microeval run my-evals                # Run all configs in my-evals/runs/*.yaml
 ```
 
-Runs all evaluation configs and saves results to `my-evals/results/`.
+Runs all evaluation configs **in parallel** and saves results to `my-evals/results/`. OpenAI API calls are rate-limited by `OPENAI_RPM` (requests per minute; see `.env.example`).
 
 ### demo1 - Quick Start Demo
 
@@ -514,7 +514,7 @@ Default models are configured in `microeval/models.yaml`. You can override them 
 - Create `eval.yaml` in your eval directory to set default eval services for all runs
 - Use environment variables (`EVAL_CHAT_SERVICE`, etc.) for CI/CD or different environments
 - Per-run configs can override global defaults
-- Results include `eval_chat_service`, `eval_chat_model`, `eval_embed_service`, and `eval_embed_model` to show which services and models were used
+- Results include an `eval_models` block with `eval_chat_service`, `eval_chat_model`, `eval_embed_service`, and `eval_embed_model` showing which services and models were used
 
 ### Comparing Results
 - Keep one variable constant when comparing (e.g., same prompt, different models)
