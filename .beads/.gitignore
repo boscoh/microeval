@@ -5,6 +5,10 @@
 *.db-wal
 *.db-shm
 
+# Dolt backend
+dolt/
+dolt-access.lock
+
 # Daemon runtime files
 daemon.lock
 daemon.log
@@ -35,12 +39,10 @@ beads.right.meta.json
 # Sync state (local-only, per-machine)
 # These files are machine-specific and should not be shared across clones
 .sync.lock
-.jsonl.lock
 sync_base.jsonl
 export-state/
 
 # NOTE: Do NOT add negation patterns (e.g., !issues.jsonl) here.
 # They would override fork protection in .git/info/exclude, allowing
 # contributors to accidentally commit upstream issue databases.
-# The JSONL files (issues.jsonl, interactions.jsonl) and config files
-# are tracked by git by default since no pattern above ignores them.
+# Config files (config.yaml, metadata.json, README.md) are tracked by default.
