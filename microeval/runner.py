@@ -164,7 +164,7 @@ class Runner:
                 q_svc = self._main_llm_client.service
                 q_model = self._main_llm_client.model or "default"
                 logger.info(
-                    f"> Eval {i + 1}/{n} '{run_id}' query: '{q_svc}:{q_model}'"
+                    f"> Evaluate '{run_id}' {i + 1}/{n} query: '{q_svc}:{q_model}'"
                 )
 
                 response = await self._main_llm_client.get_completion(
@@ -197,7 +197,7 @@ class Runner:
                 e_svc = self._eval_llm_client.service
                 e_model = self._eval_llm_client.model or "default"
                 logger.info(
-                    f"> Eval {i + 1}/{n} '{run_id}' eval: '{e_svc}:{e_model}'"
+                    f"> Evaluate '{run_id}' {i + 1}/{n} eval: '{e_svc}:{e_model}'"
                 )
                 results = await self._evaluation_runner.evaluate_response(response)
                 for evaluator_name, value in results.items():

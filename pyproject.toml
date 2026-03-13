@@ -38,6 +38,7 @@ dependencies = [
     "cyclopts>=0.6.0",
     "ty>=0.0.4",
     "pydash>=7.0.0",
+    "asynciolimiter>=1.2.0",
 ]
 
 [project.scripts]

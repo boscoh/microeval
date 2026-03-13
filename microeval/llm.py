@@ -22,6 +22,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Literal, Optional
 
 import aioboto3
+import asynciolimiter
 import boto3
 import groq
 import ollama
@@ -29,41 +30,6 @@ import openai
 import pydash
 
 logger = logging.getLogger(__name__)
-
-_OPENAI_RPM = int(os.getenv("OPENAI_RPM", "60"))
-_openai_rate_limiter = None
-
-
-class _OpenAIRateLimiter:
-    """Sliding-window rate limiter for OpenAI API: max requests per minute."""
-
-    def __init__(self, requests_per_minute: int):
-        self._rpm = max(1, requests_per_minute)
-        self._timestamps: List[float] = []
-        self._lock = asyncio.Lock()
-
-    async def acquire(self) -> None:
-        while True:
-            async with self._lock:
-                now = time.monotonic()
-                window_start = now - 60.0
-                self._timestamps = [t for t in self._timestamps if t > window_start]
-                if len(self._timestamps) < self._rpm:
-                    self._timestamps.append(now)
-                    return
-                wait_duration = self._timestamps[0] + 60.0 - now
-            if wait_duration > 0:
-                await asyncio.sleep(wait_duration)
-
-
-def _get_openai_rate_limiter() -> _OpenAIRateLimiter:
-    """Get or create the global OpenAI rate limiter."""
-    global _openai_rate_limiter
-    if _openai_rate_limiter is None:
-        _openai_rate_limiter = _OpenAIRateLimiter(_OPENAI_RPM)
-        logger.info(f"Initialized OpenAI rate limiter: {_OPENAI_RPM} requests/minute")
-    return _openai_rate_limiter
-
 
 @lru_cache
 def load_models_config() -> Dict[str, Any]:
@@ -219,6 +185,16 @@ class SimpleLLMClient(ABC):
     async def get_embedding(self, input: str) -> List[float]:
         """Generate a text embedding vector for the given input string."""
         pass
+
+    def _get_rate_limiter(self):
+        """Return a rate limiter to await before requests, or None for no limiting."""
+        return None
+
+    async def _await_rate_limit(self) -> None:
+        """Await rate limiter if one is configured. Override _get_rate_limiter to plug in a limiter."""
+        limiter = self._get_rate_limiter()
+        if limiter is not None:
+            await limiter.wait()
 
     def get_token_cost(
         self, prompt_tokens: int, completion_tokens: int
@@ -551,6 +527,8 @@ class OllamaClient(SimpleLLMClient):
 
 
 class OpenAIClient(SimpleLLMClient):
+    _rate_limiter = None
+
     def __init__(
         self,
         model: str = None,
@@ -565,6 +543,15 @@ class OpenAIClient(SimpleLLMClient):
         self.model = model
         self.client = None
         self._closed = True
+
+    def _get_rate_limiter(self):
+        """Shared rate limiter for OpenAI API (asynciolimiter; rate = requests/sec)."""
+        if OpenAIClient._rate_limiter is None:
+            rpm = int(os.getenv("OPENAI_RPM", "60"))
+            rate = max(1 / 60.0, rpm / 60.0)
+            OpenAIClient._rate_limiter = asynciolimiter.Limiter(rate)
+            logger.info(f"Initialized OpenAI rate limiter: {rpm} requests/minute")
+        return OpenAIClient._rate_limiter
 
     async def connect(self):
         if self.client and not self._closed:
@@ -706,11 +693,8 @@ class OpenAIClient(SimpleLLMClient):
         if not self.client or self._closed:
             await self.connect()
 
-        start_time = time.time()
         max_retries = 5
         base_delay = 1.0
-
-        rate_limiter = _get_openai_rate_limiter()
 
         for attempt in range(max_retries):
             try:
@@ -719,7 +703,8 @@ class OpenAIClient(SimpleLLMClient):
 
                 formatted_messages = self._transform_messages(messages)
 
-                await rate_limiter.acquire()
+                await self._await_rate_limit()
+                start_time = time.time()
                 completion = await self.client.chat.completions.create(
                     model=self.model,
                     messages=formatted_messages,
@@ -760,6 +745,11 @@ class OpenAIClient(SimpleLLMClient):
                     text, usage, finish_reason, tool_calls
                 )
             except openai.RateLimitError as e:
+                if self._is_insufficient_quota(e):
+                    logger.error(
+                        "OpenAI quota exceeded (insufficient_quota); check billing. Not retrying."
+                    )
+                    raise
                 if attempt == max_retries - 1:
                     logger.error(f"Rate limit error after {max_retries} attempts: {e}")
                     raise
@@ -802,6 +792,16 @@ class OpenAIClient(SimpleLLMClient):
                 )
                 raise
 
+    def _is_insufficient_quota(self, error: openai.RateLimitError) -> bool:
+        """True if this 429 is quota/billing exceeded; retrying will not help."""
+        if hasattr(error, "body") and isinstance(error.body, dict):
+            code = (error.body.get("error") or {}).get("code")
+            if code == "insufficient_quota":
+                return True
+        if "insufficient_quota" in str(error):
+            return True
+        return False
+
     def _extract_retry_after(self, error: openai.RateLimitError) -> Optional[float]:
         """Extract retry-after delay from rate limit error.
 
@@ -837,19 +837,22 @@ class OpenAIClient(SimpleLLMClient):
         max_retries = 5
         base_delay = 1.0
 
-        rate_limiter = _get_openai_rate_limiter()
-
         for attempt in range(max_retries):
             try:
                 if not self.client or self._closed:
                     await self.connect()
 
-                await rate_limiter.acquire()
+                await self._await_rate_limit()
                 response = await self.client.embeddings.create(
                     model=self.model, input=input
                 )
                 return response.data[0].embedding
             except openai.RateLimitError as e:
+                if self._is_insufficient_quota(e):
+                    logger.error(
+                        "OpenAI quota exceeded (insufficient_quota); check billing. Not retrying."
+                    )
+                    raise RuntimeError(f"Error generating embedding: {str(e)}")
                 if attempt == max_retries - 1:
                     logger.error(f"Rate limit error after {max_retries} attempts: {e}")
                     raise RuntimeError(f"Error generating embedding: {str(e)}")
@@ -898,9 +901,20 @@ class OpenAIClient(SimpleLLMClient):
 class GroqClient(OpenAIClient):
     """Groq chat client that inherits from OpenAI client (Groq uses OpenAI-compatible API)."""
 
+    _rate_limiter = None
+
     def __init__(self, model: str = None):
         super().__init__(model=model)
         self.service = "groq"
+
+    def _get_rate_limiter(self):
+        """Shared rate limiter for Groq API (asynciolimiter; rate = requests/sec)."""
+        if GroqClient._rate_limiter is None:
+            rpm = int(os.getenv("GROQ_RPM", "30"))
+            rate = max(1 / 60.0, rpm / 60.0)
+            GroqClient._rate_limiter = asynciolimiter.Limiter(rate)
+            logger.info(f"Initialized Groq rate limiter: {rpm} requests/minute")
+        return GroqClient._rate_limiter
 
     async def connect(self):
         if self.client and not self._closed:
@@ -955,6 +969,7 @@ class GroqClient(OpenAIClient):
                 if supports_parallel:
                     api_params["parallel_tool_calls"] = True
 
+            await self._await_rate_limit()
             completion = await self.client.chat.completions.create(**api_params)
             elapsed_seconds = time.time() - start_time
 
