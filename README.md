@@ -2,11 +2,22 @@
 
 A lightweight evaluation framework for LLM testing. Supports local models (Ollama) and cloud providers (OpenAI, AWS Bedrock, Groq). Run evaluations via CLI or web UI, compare models and prompts, and track results.
 
+## Installation
+
+- **Run without installing** (requires [uv](https://docs.astral.sh/uv/)):
+  ```bash
+  uvx microeval demo1
+  ```
+- **Install in your project** (then use `uv run microeval` or `microeval`):
+  ```bash
+  uv add microeval
+  ```
+
 ## Quick Start
 
 ### 1. Configure API Keys
 
-Create a `.env` file with your API keys:
+Create a `.env` file with your API keys (or export them in your shell profile, e.g. `~/.zprofile` or `~/.bashrc`):
 
 ```bash
 # OpenAI
