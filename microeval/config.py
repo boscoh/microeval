@@ -48,6 +48,16 @@ def load_env() -> bool:
 
 
 @lru_cache()
+def _get_models_for_service(service: str, model_type: str) -> tuple:
+    """Return the list of model IDs configured for a service in models.yaml."""
+    config = load_models_config()
+    models = pydash.get(config, f"{model_type}.{service}", [])
+    if isinstance(models, list):
+        return tuple(models)
+    return (models,) if models else ()
+
+
+@lru_cache()
 def _get_default_model(service: str, model_type: str) -> str:
     """Get the default model for a service.
 
@@ -55,13 +65,8 @@ def _get_default_model(service: str, model_type: str) -> str:
     :param model_type: 'chat_models' or 'embed_models'
     :return: Default model name or empty string
     """
-    config = load_models_config()
-    models = pydash.get(config, f"{model_type}.{service}", [])
-    if isinstance(models, list) and models:
-        return models[0]
-    if isinstance(models, str):
-        return models
-    return ""
+    models = _get_models_for_service(service, model_type)
+    return models[0] if models else ""  # type: ignore[return-value]
 
 
 @lru_cache(maxsize=128)

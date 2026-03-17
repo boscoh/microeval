@@ -94,3 +94,6 @@ Desktop.ini
 *.pid.lock
 uv.lock
 AGENTS.md
+
+# Dolt database files (added by bd init)
+.dolt/

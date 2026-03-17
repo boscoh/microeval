@@ -6,7 +6,11 @@ from typing import TYPE_CHECKING, Optional
 import pydash
 from path import Path
 
-from microeval.config import _get_connected_llm_client, _get_default_model
+from microeval.config import (
+    _get_connected_llm_client,
+    _get_default_model,
+    _get_models_for_service,
+)
 from microeval.evaluator import EvaluationRunner
 from microeval.schemas import RunConfig, RunResult, evals_dir
 from microeval.utils import save_yaml
@@ -37,13 +41,21 @@ class Runner:
     ) -> tuple[str, str]:
         """Resolve service and model with defaults.
 
-        :param service: Service name
-        :param model: Model name (may be empty)
-        :param model_type: Type of models to look up ("chat_models" or "embed_models")
-        :return: Tuple of (service, model) with defaults applied
+        If the configured model is not in models.yaml for this service (e.g. when
+        env overrides eval_chat_service to bedrock but eval_chat_model stays gpt-4o),
+        uses the service default so the provider receives a valid model ID.
         """
         if not model:
             model = _get_default_model(service, model_type) or "default"
+        else:
+            allowed = _get_models_for_service(service, model_type)
+            if allowed and model not in allowed:
+                fallback = _get_default_model(service, model_type)
+                if fallback:
+                    logger.info(
+                        f"Model '{model}' not valid for {service}, using '{fallback}'"
+                    )
+                    model = fallback
         return service, model
 
     async def _get_main_llm_client(self) -> "SimpleLLMClient":

@@ -131,8 +131,19 @@ class RunConfig(BaseModel):
         The eval.yaml file uses: eval_chat_service, eval_chat_model,
         eval_embed_service, eval_embed_model. Env vars EVAL_CHAT_SERVICE,
         EVAL_CHAT_MODEL, EVAL_EMBED_SERVICE, EVAL_EMBED_MODEL override.
+        CamelCase keys (evalChatService, etc.) are normalized to snake_case.
         """
         data = load_yaml(file_path)
+
+        _alias_to_eval_key = {
+            "evalChatService": "eval_chat_service",
+            "evalChatModel": "eval_chat_model",
+            "evalEmbedService": "eval_embed_service",
+            "evalEmbedModel": "eval_embed_model",
+        }
+        for alias, key in _alias_to_eval_key.items():
+            if alias in data and key not in data:
+                data[key] = data.pop(alias)
 
         global_config = {}
         global_config_path = evals_dir._base / "eval.yaml"
