@@ -85,6 +85,10 @@ class SimpleLLMClient(ABC):
     No type: "function" noise
         The type field on tool call objects is omitted — it has always been
         "function" and carries no information.
+
+    Structured helper
+        :meth:`get_structured_completion` wraps a single-schema tool call and
+        attaches a parsed ``structured`` dict to the completion result.
     """
 
     @abstractmethod
@@ -315,6 +319,77 @@ class SimpleLLMClient(ABC):
                 "arguments": arguments,
             },
         }
+
+    async def get_structured_completion(
+        self,
+        messages: List[Dict[str, Any]],
+        response_schema: Dict[str, Any],
+        tool_name: str = "record_result",
+        tool_description: str = "Record the structured result.",
+        max_tokens: Optional[int] = None,
+        temperature: float = 0.0,
+    ) -> Dict[str, Any]:
+        """Request a completion constrained by a single JSON-schema function tool.
+
+        Calls :meth:`get_completion` with one tool whose ``parameters`` are
+        ``response_schema``. The returned dict matches :meth:`get_completion`
+        with an added ``structured`` key: the parsed tool arguments as a dict,
+        or ``None`` if no matching tool call was returned or arguments were not
+        valid JSON.
+
+        Subclasses may override this to use provider-native structured output
+        while preserving the same return shape.
+
+        :param messages: Conversation messages (same shape as :meth:`get_completion`).
+        :param response_schema: JSON Schema for the tool ``parameters`` field
+            (``type``, ``properties``, ``required``, etc.).
+        :param tool_name: Function name exposed to the model.
+        :param tool_description: Description stored on the tool definition.
+        :param max_tokens: Forwarded to :meth:`get_completion`.
+        :param temperature: Forwarded to :meth:`get_completion`.
+        :return: Completion dict plus ``structured`` (dict or ``None``).
+        """
+        tool = {
+            "type": "function",
+            "function": {
+                "name": tool_name,
+                "description": tool_description,
+                "parameters": response_schema,
+            },
+        }
+        response = await self.get_completion(
+            messages,
+            tools=[tool],
+            max_tokens=max_tokens,
+            temperature=temperature,
+        )
+        tool_calls = response.get("tool_calls") or []
+        chosen: Optional[Dict[str, Any]] = None
+        for tc in tool_calls:
+            fn = tc.get("function") or {}
+            if fn.get("name") == tool_name:
+                chosen = tc
+                break
+        if not chosen:
+            return {**response, "structured": None}
+
+        arguments = pydash.get(chosen, "function.arguments")
+        if isinstance(arguments, str):
+            if not arguments.strip():
+                return {**response, "structured": None}
+            try:
+                data: Any = json.loads(arguments)
+            except json.JSONDecodeError as e:
+                logger.warning("Structured tool arguments were not valid JSON: %s", e)
+                return {**response, "structured": None}
+        elif isinstance(arguments, dict):
+            data = arguments
+        else:
+            return {**response, "structured": None}
+
+        if not isinstance(data, dict):
+            return {**response, "structured": None}
+        return {**response, "structured": data}
 
     async def connect(self):
         """Initialize async resources. Override in subclasses as needed.

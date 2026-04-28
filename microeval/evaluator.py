@@ -1,4 +1,3 @@
-import json
 import logging
 import math
 import re
@@ -136,6 +135,26 @@ class LLMEvaluator(BaseEvaluator):
             },
         }
 
+    def _score_and_reasoning_from_args(
+        self, args: Dict[str, Any], fallback_reasoning: str
+    ) -> tuple[float, str]:
+        score_value = pydash.get(args, "score", 0.5)
+        if isinstance(score_value, dict):
+            score_value = pydash.get(
+                score_value, "value", pydash.get(score_value, "score", 0.5)
+            )
+        if not isinstance(score_value, (int, float)):
+            try:
+                score_value = float(score_value)
+            except (ValueError, TypeError):
+                logger.warning(
+                    "Invalid score value: %s, using default 0.5", score_value
+                )
+                score_value = 0.5
+        score = snap_score(float(score_value), self.valid_scores)
+        reasoning = pydash.get(args, "reasoning", "") or fallback_reasoning
+        return score, reasoning
+
     async def evaluate(self, response_text: str) -> Dict[str, Any]:
         if not response_text.strip():
             return self._empty_result(
@@ -148,54 +167,34 @@ class LLMEvaluator(BaseEvaluator):
             {"role": "user", "content": prompt},
         ]
 
-        response = await self.llm.get_completion(messages, tools=[self._score_tool()])
+        score_tool = self._score_tool()
+        fn = score_tool["function"]
+        response = await self.llm.get_structured_completion(
+            messages,
+            fn["parameters"],
+            tool_name=fn["name"],
+            tool_description=fn.get("description") or "Submit structured result.",
+        )
 
         error_msg = pydash.get(response, "metadata.error")
         if error_msg:
             logger.error(f"LLM error in evaluation: {error_msg}")
             raise RuntimeError(f"LLM error: {error_msg}")
 
-        tool_calls = response.get("tool_calls") or []
-        if tool_calls:
-            arguments = pydash.get(tool_calls, "[0].function.arguments")
-            if isinstance(arguments, str):
-                try:
-                    args = json.loads(arguments)
-                except (json.JSONDecodeError, TypeError) as e:
-                    logger.warning(f"Failed to parse tool arguments as JSON: {e}")
-                    args = {}
-            elif isinstance(arguments, dict):
-                args = arguments
-            else:
-                args = {}
-
-            score_value = pydash.get(args, "score", 0.5)
-            if isinstance(score_value, dict):
-                score_value = pydash.get(
-                    score_value, "value", pydash.get(score_value, "score", 0.5)
-                )
-            if not isinstance(score_value, (int, float)):
-                try:
-                    score_value = float(score_value)
-                except (ValueError, TypeError):
-                    logger.warning(
-                        f"Invalid score value: {score_value}, using default 0.5"
-                    )
-                    score_value = 0.5
-            score = snap_score(float(score_value), self.valid_scores)
-            reasoning = pydash.get(args, "reasoning", "") or pydash.get(
-                response, "text", ""
-            )
+        text = response.get("text", "")
+        data = response.get("structured")
+        if data is not None:
+            score, reasoning = self._score_and_reasoning_from_args(data, text)
         else:
-            text = response.get("text", "")
-            data = parse_json(text)
-            if data is not None:
-                score = snap_score(float(data.get("score", 0.5)), self.valid_scores)
-                reasoning = data.get("reasoning", "") or text
+            parsed = parse_json(text)
+            if parsed is not None:
+                score, reasoning = self._score_and_reasoning_from_args(parsed, text)
             else:
                 numbers = re.findall(r"\b0?\.\d+\b|\b1(?:\.0+)?\b|\b0\b", text)
                 score = (
-                    snap_score(float(numbers[0]), self.valid_scores) if numbers else 0.5
+                    snap_score(float(numbers[0]), self.valid_scores)
+                    if numbers
+                    else 0.5
                 )
                 reasoning = text
 
